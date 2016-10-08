@@ -1,0 +1,7 @@
+[package]
+name = "derive-new-test"
+version = "0.1.0"
+authors = ["Nick Cameron <ncameron@mozilla.com>"]
+
+[dependencies]
+derive-new = { path = "../derive-new" }
