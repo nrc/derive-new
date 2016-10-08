@@ -8,8 +8,6 @@ extern crate quote;
 
 use rustc_macro::TokenStream;
 
-use quote::ToTokens;
-
 #[rustc_macro_derive(new)]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: String = input.to_string();
@@ -29,20 +27,19 @@ fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
 
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
-    let args: Vec<_> = fields.iter().map(|f| {
-        let f_name = f.ident.clone().unwrap();
-        let mut ty = quote::Tokens::new();
-        f.ty.to_tokens(&mut ty);
+    let args = fields.iter().map(|f| {
+        let f_name = &f.ident;
+        let ty = &f.ty;
         quote!(#f_name: #ty)
-    }).collect();
-    let inits: Vec<_> = fields.iter().map(|f| {
-        let f_name = f.ident.clone().unwrap();
+    });
+    let inits = fields.iter().map(|f| {
+        let f_name = &f.ident;
         quote!(#f_name: #f_name)
-    }).collect();
+    });
 
     quote! {
         impl #impl_generics #name #ty_generics #where_clause {
-            pub fn new(#(args),*) -> #name<#ty_generics> {
+            pub fn new(#(args),*) -> Self {
                 #name { #(inits),* }
             }
         }
