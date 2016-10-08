@@ -2,6 +2,9 @@
 name = "derive-new"
 version = "0.1.0"
 authors = ["Nick Cameron <ncameron@mozilla.com>"]
+description = "#[derive(new)] implements simple constructor functions for structs"
+license = "MIT"
+repository = "https://github.com/nrc/derive-new"
 
 [lib]
 rustc-macro = true
