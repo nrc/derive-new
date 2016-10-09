@@ -2,12 +2,12 @@
 name = "derive-new-test"
 version = "0.1.0"
 dependencies = [
- "derive-new 0.1.1",
+ "derive-new 0.1.2",
 ]
 
 [[package]]
 name = "derive-new"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "quote 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 0.8.7 (registry+https://github.com/rust-lang/crates.io-index)",

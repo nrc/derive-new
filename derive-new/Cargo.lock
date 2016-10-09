@@ -1,6 +1,6 @@
 [root]
 name = "derive-new"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "quote 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 0.8.7 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -1,14 +1,14 @@
-#![crate_type = "rustc-macro"]
-#![feature(rustc_macro, rustc_macro_lib)]
+#![crate_type = "proc-macro"]
+#![feature(proc_macro, proc_macro_lib)]
 
-extern crate rustc_macro;
+extern crate proc_macro;
 extern crate syn;
 #[macro_use]
 extern crate quote;
 
-use rustc_macro::TokenStream;
+use proc_macro::TokenStream;
 
-#[rustc_macro_derive(new)]
+#[proc_macro_derive(new)]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: String = input.to_string();
 
