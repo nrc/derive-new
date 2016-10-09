@@ -12,6 +12,14 @@ struct Bar {
     y: String,
 }
 
+#[derive(new)]
+struct Intersection<'scene> {
+    object: &'scene Bar,
+    normal: Foo,
+    point: Foo,
+    t: f64,
+}
+
 // TODO to test
 // generics
 // where clause
@@ -20,5 +28,7 @@ struct Bar {
 
 fn main() {
     let _ = Foo::new();
-    let _ = Bar::new(42, "Hello".to_owned());
+    let b = Bar::new(42, "Hello".to_owned());
+
+    let _ = Intersection::new(&b, Foo::new(), Foo::new(), 42.0);
 }

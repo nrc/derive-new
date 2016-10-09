@@ -12,11 +12,11 @@ use rustc_macro::TokenStream;
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: String = input.to_string();
 
-    let ast = syn::parse_macro_input(&input).unwrap();
+    let ast = syn::parse_macro_input(&input).expect("Couldn't parse item");
 
     let result = new_for_struct(ast);
 
-    format!("{}\n{}", input, result).parse().unwrap()
+    format!("{}\n{}", input, result).parse().expect("couldn't parse string to tokens")
 }
 
 fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
