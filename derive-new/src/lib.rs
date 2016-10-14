@@ -20,29 +20,40 @@ pub fn derive(input: TokenStream) -> TokenStream {
 }
 
 fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
-    let fields = match ast.body {
-        syn::Body::Struct(syn::VariantData::Struct(ref fields)) => fields,
-        _ => panic!("#[derive(new)] can only be used with braced structs"),
-    };
-
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
-    let args = fields.iter().map(|f| {
-        let f_name = &f.ident;
-        let ty = &f.ty;
-        quote!(#f_name: #ty)
-    });
-    let inits = fields.iter().map(|f| {
-        let f_name = &f.ident;
-        quote!(#f_name: #f_name)
-    });
 
-    quote! {
-        impl #impl_generics #name #ty_generics #where_clause {
-            pub fn new(#(args),*) -> Self {
-                #name { #(inits),* }
+    match ast.body {
+        syn::Body::Struct(syn::VariantData::Struct(ref fields)) => {
+            let args = fields.iter().map(|f| {
+                let f_name = &f.ident;
+                let ty = &f.ty;
+                quote!(#f_name: #ty)
+            });
+            let inits = fields.iter().map(|f| {
+                let f_name = &f.ident;
+                quote!(#f_name: #f_name)
+            });
+
+            quote! {
+                impl #impl_generics #name #ty_generics #where_clause {
+                    pub fn new(#(args),*) -> Self {
+                        #name { #(inits),* }
+                    }
+                }
             }
-        }
+        },
+        syn::Body::Struct(syn::VariantData::Unit) => {
+            quote! {
+                impl #impl_generics #name #ty_generics #where_clause {
+                    pub fn new() -> Self {
+                        #name
+                    }
+                }
+            }
+        },
+        syn::Body::Struct(syn::VariantData::Tuple(_)) => panic!("#[derive(new)] cannot be used with tuple structs"),
+        _ => panic!("#[derive(new)] can only be used with structs"),
     }
 }
 
