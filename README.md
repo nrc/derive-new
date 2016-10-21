@@ -1,10 +1,17 @@
 # A custom derive implementation for `#[derive(new)]`
 
-WIP, only tested on very simple structs so far.
-
 Implementation is in derive-new. Tests and examples are in derive-new-test.
 
 Example:
+
+Cargo.toml:
+
+```
+[dependencies]
+derive-new = 0.2
+```
+
+Rust code:
 
 ```
 #[macro_use]
