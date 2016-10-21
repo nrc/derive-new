@@ -30,8 +30,15 @@ struct Qux<T, U: ::std::fmt::Debug> {
     f3: i32,
 }
 
-// TODO to test
-// where clause
+#[derive(new)]
+struct FooBar<'a, T, U>
+    where T: 'a,
+          U: Sized + Send + 'a
+{
+    f1: Box<T>,
+    f2: Vec<&'a U>,
+    f3: i32,
+}
 
 fn main() {
     let _ = Foo::new();
@@ -43,4 +50,6 @@ fn main() {
     let _ = Qux::new("Hello!", Vec::<String>::new(), 42);
     let _: Qux<&'static str, String> = Qux::new("Hello!", Vec::<String>::new(), 42);
     let _ = Qux::<_, String>::new("Hello!", vec![], 42);
+
+    let _ = FooBar::new(Box::new("Hello".to_owned()), vec![&42], 42);
 }

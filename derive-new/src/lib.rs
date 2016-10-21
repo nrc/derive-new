@@ -56,11 +56,3 @@ fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
         _ => panic!("#[derive(new)] can only be used with structs"),
     }
 }
-
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn todo() {
-    }
-}
