@@ -52,7 +52,18 @@ fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
                 }
             }
         },
-        syn::Body::Struct(syn::VariantData::Tuple(_)) => panic!("#[derive(new)] cannot be used with tuple structs"),
+        syn::Body::Struct(syn::VariantData::Tuple(ref fields)) => {
+            let field = &fields[0];
+            let ty = &field.ty;
+
+            quote! {
+                impl #impl_generics #name #ty_generics #where_clause {
+                    pub fn new(value: #ty) -> Self {
+                        #name(value)
+                    }
+                }
+            }
+        },
         _ => panic!("#[derive(new)] can only be used with structs"),
     }
 }
