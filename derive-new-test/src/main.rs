@@ -40,6 +40,12 @@ struct FooBar<'a, T, U>
     f3: i32,
 }
 
+#[derive(new)]
+struct Tuple(i32, i32);
+
+#[derive(new)]
+struct TupleWithLifetime<'a>(&'a str);
+
 fn main() {
     let _ = Foo::new();
     let _ = Baz::new();
@@ -52,4 +58,8 @@ fn main() {
     let _ = Qux::<_, String>::new("Hello!", vec![], 42);
 
     let _ = FooBar::new(Box::new("Hello".to_owned()), vec![&42], 42);
+
+    let _ = Tuple::new(5, 6);
+
+    let _ = TupleWithLifetime::new("Hello");
 }
