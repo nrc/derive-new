@@ -52,7 +52,21 @@ fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
                 }
             }
         },
-        syn::Body::Struct(syn::VariantData::Tuple(_)) => panic!("#[derive(new)] cannot be used with tuple structs"),
+        syn::Body::Struct(syn::VariantData::Tuple(ref fields)) => {
+            let (args, inits): (Vec<_>, Vec<_>) = fields.iter().enumerate().map(|(i, f)| {
+                let f_name = syn::Ident::new(format!("value{}", i));
+                let ty = &f.ty;
+                (quote!(#f_name: #ty), f_name)
+            }).unzip();
+
+            quote! {
+                impl #impl_generics #name #ty_generics #where_clause {
+                    pub fn new(#(args),*) -> Self {
+                        #name(#(inits),*)
+                    }
+                }
+            }
+        },
         _ => panic!("#[derive(new)] can only be used with structs"),
     }
 }
