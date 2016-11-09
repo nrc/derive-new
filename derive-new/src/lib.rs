@@ -22,6 +22,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
 fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+    let doc_comment = format!("Constructs a new `{}`.", name);
 
     match ast.body {
         syn::Body::Struct(syn::VariantData::Struct(ref fields)) => {
@@ -37,6 +38,7 @@ fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
 
             quote! {
                 impl #impl_generics #name #ty_generics #where_clause {
+                    #[doc = #doc_comment]
                     pub fn new(#(args),*) -> Self {
                         #name { #(inits),* }
                     }
@@ -46,6 +48,7 @@ fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
         syn::Body::Struct(syn::VariantData::Unit) => {
             quote! {
                 impl #impl_generics #name #ty_generics #where_clause {
+                    #[doc = #doc_comment]
                     pub fn new() -> Self {
                         #name
                     }
@@ -61,6 +64,7 @@ fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
 
             quote! {
                 impl #impl_generics #name #ty_generics #where_clause {
+                    #[doc = #doc_comment]
                     pub fn new(#(args),*) -> Self {
                         #name(#(inits),*)
                     }
