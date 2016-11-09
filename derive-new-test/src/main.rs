@@ -1,37 +1,47 @@
+#![allow(dead_code)]
+#![deny(missing_docs)]
 #![feature(proc_macro)]
+
+//! Test crate for derive-new. If it compiles, then it's tested.
 
 #[macro_use]
 extern crate derive_new;
 
+/// A struct with no fields.
 #[derive(new)]
-struct Foo {}
+pub struct Foo {}
 
+/// A unit struct.
 #[derive(new)]
-struct Baz {}
+pub struct Baz;
 
+/// A struct with fields.
 #[derive(new)]
-struct Bar {
+pub struct Bar {
     x: i32,
     y: String,
 }
 
+/// A struct with a lifetime parameter.
 #[derive(new)]
-struct Intersection<'scene> {
+pub struct Intersection<'scene> {
     object: &'scene Bar,
     normal: Foo,
     point: Foo,
     t: f64,
 }
 
+/// A struct with generics and bounds.
 #[derive(new)]
-struct Qux<T, U: ::std::fmt::Debug> {
+pub struct Qux<T, U: ::std::fmt::Debug> {
     f1: T,
     f2: Vec<U>,
     f3: i32,
 }
 
+/// A struct with a lifetime parameter, generics and bounds.
 #[derive(new)]
-struct FooBar<'a, T, U>
+pub struct FooBar<'a, T, U>
     where T: 'a,
           U: Sized + Send + 'a
 {
@@ -40,11 +50,13 @@ struct FooBar<'a, T, U>
     f3: i32,
 }
 
+/// A tuple struct.
 #[derive(new)]
-struct Tuple(i32, i32);
+pub struct Tuple(i32, i32);
 
+/// A tuple struct with a lifetime parameter.
 #[derive(new)]
-struct TupleWithLifetime<'a>(&'a str);
+pub struct TupleWithLifetime<'a>(&'a str);
 
 fn main() {
     let _ = Foo::new();
