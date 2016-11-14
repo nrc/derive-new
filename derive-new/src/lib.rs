@@ -16,7 +16,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
     let result = new_for_struct(ast);
 
-    format!("{}\n{}", input, result).parse().expect("couldn't parse string to tokens")
+    result.to_string().parse().expect("couldn't parse string to tokens")
 }
 
 fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
