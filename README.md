@@ -6,14 +6,14 @@ Example:
 
 Cargo.toml:
 
-```
+```toml
 [dependencies]
 derive-new = "0.3"
 ```
 
 Rust code:
 
-```
+```rust
 #[macro_use]
 extern crate derive_new;
 
