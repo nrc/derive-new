@@ -13,7 +13,7 @@ Cargo.toml:
 
 ```toml
 [dependencies]
-derive-new = "0.3"
+derive-new = "0.4"
 ```
 
 Rust code:
