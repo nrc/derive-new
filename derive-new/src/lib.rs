@@ -38,8 +38,8 @@ fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
             quote! {
                 impl #impl_generics #name #ty_generics #where_clause {
                     #[doc = #doc_comment]
-                    pub fn new(#(args),*) -> Self {
-                        #name { #(inits),* }
+                    pub fn new(#(#args),*) -> Self {
+                        #name { #(#inits),* }
                     }
                 }
             }
@@ -64,8 +64,8 @@ fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
             quote! {
                 impl #impl_generics #name #ty_generics #where_clause {
                     #[doc = #doc_comment]
-                    pub fn new(#(args),*) -> Self {
-                        #name(#(inits),*)
+                    pub fn new(#(#args),*) -> Self {
+                        #name(#(#inits),*)
                     }
                 }
             }
