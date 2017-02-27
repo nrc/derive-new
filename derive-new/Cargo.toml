@@ -10,5 +10,5 @@ repository = "https://github.com/nrc/derive-new"
 proc-macro = true
 
 [dependencies]
-syn = "0.8"
-quote = "0.2"
+syn = "0.11"
+quote = "0.3"
