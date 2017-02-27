@@ -1,7 +1,3 @@
-#![allow(dead_code)]
-#![deny(missing_docs)]
-#![feature(proc_macro)]
-
 #[macro_use]
 extern crate derive_new;
 
