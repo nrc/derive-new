@@ -24,8 +24,10 @@ extern crate derive_new;
 
 #[derive(new)]
 struct Bar {
-    x: i32,
-    y: String,
+    a: i32,
+    b: String,
+    #[new(default)] c: Vec<u32>,
+    #[new(value = "false")] d: bool,
 }
 
 fn main() {
