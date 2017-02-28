@@ -1,5 +1,7 @@
 #![crate_type = "proc-macro"]
 
+#![recursion_limit = "192"]
+
 extern crate proc_macro;
 extern crate syn;
 #[macro_use]
