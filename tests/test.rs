@@ -3,6 +3,7 @@ extern crate derive_new;
 
 use std::default::Default;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
 /// A struct with no fields.
 #[derive(new, PartialEq, Debug)]
@@ -156,4 +157,17 @@ pub struct Thud {
 fn test_struct_mixed_defaults() {
     let x = Thud::new();
     assert_eq!(x, Thud { x: "Thud".to_owned(), y: String::new() });
+}
+
+/// A generic struct with PhantomData member.
+#[derive(new, PartialEq, Debug)]
+pub struct Bob<T: PartialEq + Debug> {
+    pub a: i32,
+    pub b: PhantomData<T>,
+}
+
+#[test]
+fn test_struct_phantom_data() {
+    let x = Bob::<i32>::new(42);
+    assert_eq!(x, Bob { a: 42, b: PhantomData });
 }
