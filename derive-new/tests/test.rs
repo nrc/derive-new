@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate derive_new;
 
+use std::default::Default;
 use std::fmt::Debug;
 
 /// A struct with no fields.
@@ -108,4 +109,51 @@ pub struct TupleWithLifetime<'a>(pub &'a str);
 fn test_tuple_struct_lifetime() {
     let x = TupleWithLifetime::new("Hello");
     assert_eq!(x, TupleWithLifetime("Hello"));
+}
+
+/// A struct where fields have default values.
+#[derive(new, PartialEq, Debug)]
+pub struct Waldo<T: PartialEq + Debug + Default> {
+    #[new(default)]
+    pub x: i32,
+    pub y: u8,
+    #[new(default)]
+    pub z: T,
+}
+
+#[test]
+fn test_struct_with_defaults() {
+    let x = Waldo::<Vec<String>>::new(42);
+    assert_eq!(x, Waldo { x: 0, y: 42, z: vec![] });
+}
+
+/// A struct where fields have explicitly provided defaults.
+#[derive(new, PartialEq, Debug)]
+pub struct Fred {
+    #[new(value = "1 + 2")]
+    pub x: i32,
+    pub y: String,
+    #[new(value = "vec![-42, 42]")]
+    pub z: Vec<i8>,
+}
+
+#[test]
+fn test_struct_with_values() {
+    let x = Fred::new("Fred".to_owned());
+    assert_eq!(x, Fred { x: 3, y: "Fred".to_owned(), z: vec![-42, 42] });
+}
+
+/// A struct with defaults and specified values.
+#[derive(new, PartialEq, Debug)]
+pub struct Thud {
+    #[new(value = r#""Thud".to_owned()"#)]
+    pub x: String,
+    #[new(default)]
+    pub y: String,
+}
+
+#[test]
+fn test_struct_mixed_defaults() {
+    let x = Thud::new();
+    assert_eq!(x, Thud { x: "Thud".to_owned(), y: String::new() });
 }
