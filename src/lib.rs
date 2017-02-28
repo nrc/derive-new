@@ -83,6 +83,16 @@ fn parse_attrs(attrs: &[syn::Attribute]) -> Option<FieldAttr> {
     result
 }
 
+fn is_phantom_data(ty: &syn::Ty) -> bool {
+    match *ty {
+        syn::Ty::Path(None, ref path) => {
+            path.segments.as_slice().last()
+                .map(|x| x.ident.as_ref() == "PhantomData").unwrap_or(false)
+        },
+        _ => false,
+    }
+}
+
 fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
@@ -95,8 +105,10 @@ fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
                 .collect::<Vec<_>>();
             let args = fields.iter()
                 .zip(attrs.iter())
-                .filter(|v| v.1.is_none())
-                .map(|(f, _)| {
+                .filter(|&(_, a)| a.is_none())
+                .map(|(f, _)| f)
+                .filter(|f| !is_phantom_data(&f.ty))
+                .map(|f| {
                     let f_name = &f.ident;
                     let ty = &f.ty;
                     quote!(#f_name: #ty)
@@ -105,9 +117,13 @@ fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
                 .zip(attrs.iter())
                 .map(|(f, ref a)| {
                     let f_name = &f.ident;
-                    let init = match **a {
-                        None => quote!(#f_name),
-                        Some(ref a) => a.to_tokens(),
+                    let init = if is_phantom_data(&f.ty) {
+                        quote!(::std::marker::PhantomData)
+                    } else {
+                        match **a {
+                            None => quote!(#f_name),
+                            Some(ref a) => a.to_tokens(),
+                        }
                     };
                     quote!(#f_name: #init)
                 });
