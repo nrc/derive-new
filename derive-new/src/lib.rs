@@ -9,7 +9,7 @@ extern crate quote;
 
 use proc_macro::TokenStream;
 
-#[proc_macro_derive(new)]
+#[proc_macro_derive(new, attributes(new))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: String = input.to_string();
 
@@ -20,6 +20,69 @@ pub fn derive(input: TokenStream) -> TokenStream {
     result.to_string().parse().expect("Couldn't parse string to tokens")
 }
 
+enum FieldAttr {
+    Default,
+    Value(syn::Expr),
+}
+
+impl FieldAttr {
+    pub fn to_tokens(&self) -> quote::Tokens {
+        match *self {
+            FieldAttr::Default => quote!(::std::default::Default::default()),
+            FieldAttr::Value(ref s) => quote!(#s),
+        }
+    }
+}
+
+fn parse_attrs(attrs: &[syn::Attribute]) -> Option<FieldAttr> {
+    use syn::{MetaItem, NestedMetaItem, AttrStyle};
+
+    let mut result = None;
+    for attr in attrs.iter() {
+        if attr.style == AttrStyle::Outer && !attr.is_sugared_doc && attr.value.name() == "new" {
+            if let MetaItem::List(_, ref items) = attr.value {
+                for item in items {
+                    if result.is_some() {
+                        panic!("Expected at most one #[new] attribute");
+                    }
+                    match *item {
+                        NestedMetaItem::MetaItem(MetaItem::Word(ref ident)) => {
+                            if ident.as_ref() == "default" {
+                                result = Some(FieldAttr::Default);
+                            } else {
+                                panic!("Invalid #[new] attribute: #[new({})]", ident);
+                            }
+                        },
+                        NestedMetaItem::MetaItem(MetaItem::NameValue(ref ident, ref lit)) => {
+                            if let syn::Lit::Str(ref s, _) = *lit {
+                                if ident.as_ref() == "value" {
+                                    let expr = syn::parse_expr(s.as_ref()).ok()
+                                        .expect(&format!("Invalid expression in #[new]: `{}`", s));
+                                    result = Some(FieldAttr::Value(expr));
+                                } else {
+                                    panic!("Invalid #[new] attribute: #[new({} = ..)]", ident);
+                                }
+                            } else {
+                                panic!("Non-string literal value in #[new] attribute");
+                            }
+                        },
+                        NestedMetaItem::MetaItem(MetaItem::List(ref ident, _)) => {
+                            panic!("Invalid #[new] attribute: #[new({}(..))]", ident);
+                        },
+                        NestedMetaItem::Literal(_) => {
+                            panic!("Invalid #[new] attribute: literal value in #[new(..)]");
+                        }
+                    }
+                }
+
+            } else {
+                panic!("Invalid #[new] attribute, expected #[new(..)]");
+            }
+        }
+    }
+    result
+}
+
 fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
@@ -27,16 +90,27 @@ fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
 
     match ast.body {
         syn::Body::Struct(syn::VariantData::Struct(ref fields)) => {
-            let args = fields.iter().map(|f| {
-                let f_name = &f.ident;
-                let ty = &f.ty;
-                quote!(#f_name: #ty)
-            });
-            let inits = fields.iter().map(|f| {
-                let f_name = &f.ident;
-                quote!(#f_name: #f_name)
-            });
-
+            let attrs = fields.iter()
+                .map(|f| parse_attrs(&f.attrs))
+                .collect::<Vec<_>>();
+            let args = fields.iter()
+                .zip(attrs.iter())
+                .filter(|v| v.1.is_none())
+                .map(|(f, _)| {
+                    let f_name = &f.ident;
+                    let ty = &f.ty;
+                    quote!(#f_name: #ty)
+                });
+            let inits = fields.iter()
+                .zip(attrs.iter())
+                .map(|(f, ref a)| {
+                    let f_name = &f.ident;
+                    let init = match **a {
+                        None => quote!(#f_name),
+                        Some(ref a) => a.to_tokens(),
+                    };
+                    quote!(#f_name: #init)
+                });
             quote! {
                 impl #impl_generics #name #ty_generics #where_clause {
                     #[doc = #doc_comment]
