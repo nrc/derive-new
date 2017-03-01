@@ -171,3 +171,63 @@ fn test_struct_phantom_data() {
     let x = Bob::<i32>::new(42);
     assert_eq!(x, Bob { a: 42, b: PhantomData });
 }
+
+/// A tuple struct where fields have default values.
+#[derive(new, PartialEq, Debug)]
+pub struct Boom<T: PartialEq + Debug + Default>(
+    #[new(default)]
+    pub i32,
+    pub u8,
+    #[new(default)]
+    pub T,
+);
+
+#[test]
+fn test_tuple_with_defaults() {
+    let x = Boom::<Vec<String>>::new(42);
+    assert_eq!(x, Boom(0, 42, vec![]));
+}
+
+/// A tuple struct where fields have explicitly provided defaults.
+#[derive(new, PartialEq, Debug)]
+pub struct Moog(
+    #[new(value = "1 + 2")]
+    pub i32,
+    pub String,
+    #[new(value = "vec![-42, 42]")]
+    pub Vec<i8>,
+);
+
+#[test]
+fn test_tuple_with_values() {
+    let x = Moog::new("Fred".to_owned());
+    assert_eq!(x, Moog(3, "Fred".to_owned(), vec![-42, 42]));
+}
+
+/// A tuple struct with defaults and specified values.
+#[derive(new, PartialEq, Debug)]
+pub struct Crab(
+    #[new(value = r#""Thud".to_owned()"#)]
+    pub String,
+    #[new(default)]
+    pub String,
+);
+
+#[test]
+fn test_tuple_mixed_defaults() {
+    let x = Crab::new();
+    assert_eq!(x, Crab("Thud".to_owned(), String::new()));
+}
+
+/// A generic tuple struct with PhantomData member.
+#[derive(new, PartialEq, Debug)]
+pub struct Sponge<T: PartialEq + Debug>(
+    pub i32,
+    pub PhantomData<T>,
+);
+
+#[test]
+fn test_tuple_phantom_data() {
+    let x = Sponge::<i32>::new(42);
+    assert_eq!(x,  Sponge(42, PhantomData));
+}
