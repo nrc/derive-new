@@ -12,11 +12,8 @@ use proc_macro::TokenStream;
 #[proc_macro_derive(new, attributes(new))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: String = input.to_string();
-
     let ast = syn::parse_macro_input(&input).expect("Couldn't parse item");
-
     let result = new_for_struct(ast);
-
     result.to_string().parse().expect("Couldn't parse string to tokens")
 }
 
