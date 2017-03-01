@@ -243,6 +243,35 @@ pub enum Fizz {
 fn test_enum_unit_variants() {
     let x = Fizz::new_this_is_not_a_drill();
     assert_eq!(x, Fizz::ThisISNotADrill);
+
     let x = Fizz::new_bite_me();
     assert_eq!(x, Fizz::BiteMe);
+}
+
+/// A more involved enum
+#[derive(new, PartialEq, Debug)]
+pub enum Enterprise<T: PartialEq + Debug + Default> {
+    Picard,
+    Data(
+        #[new(value = "\"fascinating\".to_owned()")]
+        String,
+        #[new(default)]
+        T,
+    ),
+    Spock {
+        x: PhantomData<T>,
+        y: i32,
+    },
+}
+
+#[test]
+fn test_more_involved_enum() {
+    let x = Enterprise::<u8>::new_picard();
+    assert_eq!(x, Enterprise::Picard);
+
+    let x = Enterprise::<u8>::new_data();
+    assert_eq!(x, Enterprise::Data("fascinating".to_owned(), 0u8));
+
+    let x = Enterprise::<u8>::new_spock(42);
+    assert_eq!(x, Enterprise::Spock { x: PhantomData, y: 42 });
 }
