@@ -9,8 +9,12 @@ repository = "https://github.com/nrc/derive-new"
 [lib]
 proc-macro = true
 
+[features]
+compiletest = ["compiletest_rs"]
+
 [dependencies]
 quote = "0.3"
+compiletest_rs = { version = "0.2", optional = true }
 
 [dependencies.syn]
 version = "0.11"
