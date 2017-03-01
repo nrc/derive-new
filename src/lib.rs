@@ -69,20 +69,21 @@ fn new_impl(ast: &syn::MacroInput, fields: Option<&[syn::Field]>,
         quote![( #(#inits),* )]
     };
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
-    let doc_comment = format!("Constructs a new `{}`.", name);
-    let (new, qual) = match variant {
+    let (new, qual, doc) = match variant {
         None => (
             syn::Ident::new("new"),
             quote!(),
+            format!("Constructs a new `{}`.", name),
         ),
         Some(ref variant) => (
             syn::Ident::new(format!("new_{}", to_snake_case(variant.as_ref()))),
             quote!(::#variant),
+            format!("Constructs a new `{}::{}`.", name, variant),
         ),
     };
     quote! {
         impl #impl_generics #name #ty_generics #where_clause {
-            #[doc = #doc_comment]
+            #[doc = #doc]
             pub fn #new(#(#args),*) -> Self {
                 #name #qual #inits
             }
