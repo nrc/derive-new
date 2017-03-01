@@ -13,26 +13,46 @@ use proc_macro::TokenStream;
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: String = input.to_string();
     let ast = syn::parse_macro_input(&input).expect("Couldn't parse item");
-    let result = new_for_struct(ast);
+    let result = match ast.body {
+        syn::Body::Enum(ref variants) => new_for_enum(&ast, &variants),
+        syn::Body::Struct(ref variant_data) => new_for_struct(&ast, &variant_data, None),
+    };
     result.to_string().parse().expect("Couldn't parse string to tokens")
 }
 
-fn new_for_struct(ast: syn::MacroInput) -> quote::Tokens {
-    match ast.body {
-        syn::Body::Struct(syn::VariantData::Struct(ref fields)) => {
-            new_impl(&ast, Some(&fields), true)
+
+fn new_for_struct(ast: &syn::MacroInput, variant_data: &syn::VariantData,
+                  variant: Option<&syn::Ident>) -> quote::Tokens
+{
+    match *variant_data {
+        syn::VariantData::Struct(ref fields) => {
+            new_impl(&ast, Some(&fields), true, variant)
         },
-        syn::Body::Struct(syn::VariantData::Unit) => {
-            new_impl(&ast, None, false)
+        syn::VariantData::Unit => {
+            new_impl(&ast, None, false, variant)
         },
-        syn::Body::Struct(syn::VariantData::Tuple(ref fields)) => {
-            new_impl(&ast, Some(&fields), false)
+        syn::VariantData::Tuple(ref fields) => {
+            new_impl(&ast, Some(&fields), false, variant)
         },
-        _ => panic!("#[derive(new)] can only be used with structs"),
     }
 }
 
-fn new_impl(ast: &syn::MacroInput, fields: Option<&[syn::Field]>, named: bool) -> quote::Tokens {
+fn new_for_enum(ast: &syn::MacroInput, variants: &[syn::Variant]) -> quote::Tokens {
+    if variants.is_empty() {
+        panic!("#[derive(new)] cannot be implemented for enums with zero variants");
+    }
+    let impls = variants.iter().map(|v| {
+        if v.discriminant.is_some() {
+            panic!("#[derive(new)] cannot be implemented for enums with discriminants");
+        }
+        new_for_struct(ast, &v.data, Some(&v.ident))
+    });
+    quote!(#(#impls)*)
+}
+
+fn new_impl(ast: &syn::MacroInput, fields: Option<&[syn::Field]>,
+            named: bool, variant: Option<&syn::Ident>) -> quote::Tokens
+{
     let name = &ast.ident;
     let unit = fields.is_none();
     let fields: Vec<_> = fields.unwrap_or(&[]).iter()
@@ -50,11 +70,21 @@ fn new_impl(ast: &syn::MacroInput, fields: Option<&[syn::Field]>, named: bool) -
     };
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
     let doc_comment = format!("Constructs a new `{}`.", name);
+    let (new, qual) = match variant {
+        None => (
+            syn::Ident::new("new"),
+            quote!(),
+        ),
+        Some(ref variant) => (
+            syn::Ident::new(format!("new_{}", to_snake_case(variant.as_ref()))),
+            quote!(::#variant),
+        ),
+    };
     quote! {
         impl #impl_generics #name #ty_generics #where_clause {
             #[doc = #doc_comment]
-            pub fn new(#(#args),*) -> Self {
-                #name #inits
+            pub fn #new(#(#args),*) -> Self {
+                #name #qual #inits
             }
         }
     }
@@ -186,4 +216,52 @@ impl<'a> FieldExt<'a> {
             quote!(#init)
         }
     }
+}
+
+fn to_snake_case(s: &str) -> String {
+    let (ch, next, mut acc): (Option<char>, Option<char>, String) =
+        s.chars().fold((None, None, String::new()), |(prev, ch, mut acc), next| {
+            if let Some(ch) = ch {
+                if let Some(prev) = prev {
+                    if ch.is_uppercase() {
+                        if prev.is_lowercase() || prev.is_numeric() ||
+                            (prev.is_uppercase() && next.is_lowercase())
+                        {
+                            acc.push('_');
+                        }
+                    }
+                }
+                acc.extend(ch.to_lowercase());
+            }
+            (ch, Some(next), acc)
+        });
+    if let Some(next) = next {
+        if let Some(ch) = ch {
+            if (ch.is_lowercase() || ch.is_numeric()) && next.is_uppercase() {
+                acc.push('_');
+            }
+        }
+        acc.extend(next.to_lowercase());
+    }
+    acc
+}
+
+
+#[test]
+fn test_to_snake_case() {
+    assert_eq!(to_snake_case(""), "");
+    assert_eq!(to_snake_case("a"), "a");
+    assert_eq!(to_snake_case("B"), "b");
+    assert_eq!(to_snake_case("BC"), "bc");
+    assert_eq!(to_snake_case("Bc"), "bc");
+    assert_eq!(to_snake_case("bC"), "b_c");
+    assert_eq!(to_snake_case("Fred"), "fred");
+    assert_eq!(to_snake_case("CARGO"), "cargo");
+    assert_eq!(to_snake_case("_Hello"), "_hello");
+    assert_eq!(to_snake_case("QuxBaz"), "qux_baz");
+    assert_eq!(to_snake_case("FreeBSD"), "free_bsd");
+    assert_eq!(to_snake_case("specialK"), "special_k");
+    assert_eq!(to_snake_case("hello1World"), "hello1_world");
+    assert_eq!(to_snake_case("Keep_underscore"), "keep_underscore");
+    assert_eq!(to_snake_case("ThisISNotADrill"), "this_is_not_a_drill");
 }
