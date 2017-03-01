@@ -60,7 +60,7 @@ fn new_impl(ast: &syn::MacroInput, fields: Option<&[syn::Field]>,
     let args = fields.iter()
         .filter(|f| f.needs_arg()).map(|f| f.as_arg());
     let inits = fields.iter()
-        .map(|f| f.as_init()).collect::<Vec<_>>();
+        .map(|f| f.as_init());
     let inits = if unit {
         quote!()
     } else if named {
