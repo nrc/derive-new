@@ -231,3 +231,18 @@ fn test_tuple_phantom_data() {
     let x = Sponge::<i32>::new(42);
     assert_eq!(x,  Sponge(42, PhantomData));
 }
+
+/// An enum with unit variants
+#[derive(new, PartialEq, Debug)]
+pub enum Fizz {
+    ThisISNotADrill,
+    BiteMe,
+}
+
+#[test]
+fn test_enum_unit_variants() {
+    let x = Fizz::new_this_is_not_a_drill();
+    assert_eq!(x, Fizz::ThisISNotADrill);
+    let x = Fizz::new_bite_me();
+    assert_eq!(x, Fizz::BiteMe);
+}
