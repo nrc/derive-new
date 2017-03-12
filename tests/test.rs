@@ -1,3 +1,5 @@
+#![deny(non_snake_case)]
+
 #[macro_use]
 extern crate derive_new;
 
@@ -275,3 +277,11 @@ fn test_more_involved_enum() {
     let x = Enterprise::<u8>::new_spock(42);
     assert_eq!(x, Enterprise::Spock { x: PhantomData, y: 42 });
 }
+
+#[allow(non_snake_case)]
+#[derive(new, PartialEq, Debug)]
+pub struct Upside { X: i32 }
+
+#[cfg_attr(test, allow(non_snake_case))]
+#[derive(new, PartialEq, Debug)]
+pub struct Down { X: i32 }
