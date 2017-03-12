@@ -81,14 +81,44 @@ fn new_impl(ast: &syn::MacroInput, fields: Option<&[syn::Field]>,
             format!("Constructs a new `{}::{}`.", name, variant),
         ),
     };
+    let lint_attrs = collect_parent_lint_attrs(&ast.attrs);
+    let lint_attrs = quote![#(#lint_attrs),*];
     quote! {
         impl #impl_generics #name #ty_generics #where_clause {
             #[doc = #doc]
+            #lint_attrs
             pub fn #new(#(#args),*) -> Self {
                 #name #qual #inits
             }
         }
     }
+}
+
+fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
+    fn is_lint(item: &syn::MetaItem) -> bool {
+        if let syn::MetaItem::List(ref ident, _) = *item {
+            match ident.as_ref() {
+                "allow" | "deny" | "forbid" | "warn" => return true,
+                _ => (),
+            }
+        }
+        false
+    }
+
+    fn is_cfg_attr_lint(item: &syn::MetaItem) -> bool {
+        if let syn::MetaItem::List(ref ident, ref items) = *item {
+            if ident.as_ref() == "cfg_attr" && items.len() == 2 {
+                if let syn::NestedMetaItem::MetaItem(ref item) = items[1] {
+                    return is_lint(item);
+                }
+            }
+        }
+        false
+    }
+
+    attrs.iter().filter(|attr| {
+        is_lint(&attr.value) || is_cfg_attr_lint(&attr.value)
+    }).cloned().collect()
 }
 
 enum FieldAttr {
