@@ -24,18 +24,23 @@
 //!```rust
 //!#[macro_use]
 //!extern crate derive_new;
+//!fn main() {}
 //!```
 //!
 //!Generating constructor for a simple struct:
 //!
 //!```rust
+//!#[macro_use]
+//!extern crate derive_new;
 //!#[derive(new)]
 //!struct Bar {
 //!    a: i32,
 //!    b: String,
 //!}
 //!
-//!let _ = Bar::new(42, "Hello".to_owned());
+//!fn main() {
+//!  let _ = Bar::new(42, "Hello".to_owned());
+//!}
 //!```
 //!
 //!Default values can be specified either via `#[new(default)]` attribute which removes
@@ -43,6 +48,8 @@
 //!or via `#[new(value = "..")]` which initializes the field with a given expression:
 //!
 //!```rust
+//!#[macro_use]
+//!extern crate derive_new;
 //!#[derive(new)]
 //!struct Foo {
 //!    x: bool,
@@ -52,13 +59,17 @@
 //!    z: Vec<String>,
 //!}
 //!
-//!let _ = Foo::new(true);
+//!fn main() {
+//!  let _ = Foo::new(true);
+//!}
 //!```
 //!
 //!Generic types are supported; in particular, `PhantomData<T>` fields will be not
 //!included in the argument list and will be intialized automatically:
 //!
 //!```rust
+//!#[macro_use]
+//!extern crate derive_new;
 //!use std::marker::PhantomData;
 //!
 //!#[derive(new)]
@@ -69,7 +80,9 @@
 //!    z: T,
 //!}
 //!
-//!let _ = Generic::<i32, u8>::new("Hello");
+//!fn main() {
+//!  let _ = Generic::<i32, u8>::new("Hello");
+//!}
 //!```
 //!
 //!For enums, one constructor method is generated for each variant, with the type
@@ -77,16 +90,20 @@
 //!structs work for enum variants as well:
 //!
 //!```rust
+//!#[macro_use]
+//!extern crate derive_new;
 //!#[derive(new)]
-//!struct Enum {
+//!enum Enum {
 //!    FirstVariant,
 //!    SecondVariant(bool, #[new(default)] u8),
 //!    ThirdVariant { x: i32, #[new(value = "vec![1]")] y: Vec<u8> }
 //!}
 //!
-//!let _ = Enum::new_first_variant();
-//!let _ = Enum::new_second_variant(true);
-//!let _ = Enum::new_third_variant(42);
+//!fn main() {
+//!  let _ = Enum::new_first_variant();
+//!  let _ = Enum::new_second_variant(true);
+//!  let _ = Enum::new_third_variant(42);
+//!}
 //!```
 #![crate_type = "proc-macro"]
 
