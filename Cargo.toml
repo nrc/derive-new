@@ -14,7 +14,7 @@ compiletest = ["compiletest_rs"]
 
 [dependencies]
 quote = "0.3"
-compiletest_rs = { version = "0.2", optional = true }
+compiletest_rs = { version = "0.3", optional = true }
 
 [dependencies.syn]
 version = "0.11"
