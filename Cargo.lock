@@ -2,19 +2,53 @@
 name = "derive-new"
 version = "0.5.0"
 dependencies = [
- "compiletest_rs 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "compiletest_rs 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 0.11.11 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
+name = "cfg-if"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "compiletest_rs"
-version = "0.2.8"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
+ "diff 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "filetime 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "getopts 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "diff"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "filetime"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "redox_syscall 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "getopts"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "libc"
+version = "0.2.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "log"
@@ -24,6 +58,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "quote"
 version = "0.3.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "redox_syscall"
+version = "0.1.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -55,9 +94,15 @@ version = "0.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
-"checksum compiletest_rs 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "617b23d0ed4f57b3bcff6b5fe0a78f0010f1efb636298317665a960b6dbc0533"
+"checksum cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d4c819a1287eb618df47cc647173c5c4c66ba19d888a6e50d605672aed3140de"
+"checksum compiletest_rs 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "86f4663adfd113e17109c35c2067194eca782a5baf9c90f4696ca13d04631adb"
+"checksum diff 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "0a515461b6c8c08419850ced27bc29e86166dcdcde8fbe76f8b1f0589bb49472"
+"checksum filetime 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)" = "aa75ec8f7927063335a9583e7fa87b0110bb888cf766dc01b54c0ff70d760c8e"
+"checksum getopts 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)" = "65922871abd2f101a2eb0eaebadc66668e54a87ad9c3dd82520b5f86ede5eff9"
+"checksum libc 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)" = "56cce3130fd040c28df6f495c8492e5ec5808fb4c9093c310df02b0c8f030148"
 "checksum log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)" = "880f77541efa6e5cc74e76910c9884d9859683118839d6a1dc3b11e63512565b"
 "checksum quote 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)" = "7a6e920b65c65f10b2ae65c831a81a073a89edd28c7cce89475bff467ab4167a"
+"checksum redox_syscall 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)" = "8dde11f18c108289bef24469638a04dce49da56084f2d50618b226e47eb04509"
 "checksum rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)" = "dcf128d1287d2ea9d80910b5f1120d0b8eede3fbf1abe91c40d39ea7d51e6fda"
 "checksum syn 0.11.11 (registry+https://github.com/rust-lang/crates.io-index)" = "d3b891b9015c88c576343b9b3e41c2c11a51c219ef067b264bd9c8aa9b441dad"
 "checksum synom 0.11.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a393066ed9010ebaed60b9eafa373d4b1baac186dd7e008555b0f702b51945b6"
