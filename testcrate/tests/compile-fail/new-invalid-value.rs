@@ -2,8 +2,8 @@
 extern crate derive_new;
 
 #[derive(new)]
-//~^ ERROR proc-macro derive
-//~^^ HELP Invalid expression in #[new]: `hello@world`
+//~^ ERROR produced unparseable tokens
+//~^^ ERROR expected one of
 struct Foo {
     #[new(value = "hello@world")]
     x: i32,

@@ -1,6 +1,12 @@
 language: rust
-rust:
-  - stable
-  - beta
-  - nightly
+matrix:
+  include:
+    - rust: stable
+    - rust: beta
+    - rust: nightly
+      script:
+        - cargo test
+        - cargo test --manifest-path testcrate/Cargo.toml
 
+script:
+  - cargo test

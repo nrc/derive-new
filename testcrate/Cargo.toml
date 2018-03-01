@@ -1,0 +1,15 @@
+[package]
+name = "testcrate"
+version = "0.1.0"
+authors = ["Alex Crichton <alex@alexcrichton.com>"]
+
+[dependencies]
+derive-new = { path = ".." }
+
+[dev-dependencies]
+compiletest_rs = "0.3.7"
+
+[[test]]
+name = "compile-fail"
+path = "tests/compile-fail.rs"
+harness = false
