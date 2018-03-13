@@ -271,7 +271,10 @@ impl FieldAttr {
             };
             let list = match meta {
                 Meta::List(l) => l,
-                _ => panic!("Invalid #[new] attribute, expected #[new(..)]"),
+                _ if meta.name() == "new" => {
+                    panic!("Invalid #[new] attribute, expected #[new(..)]");
+                }
+                _ => continue,
             };
             if result.is_some() {
                 panic!("Expected at most one #[new] attribute");
