@@ -20,7 +20,7 @@ dependencies = [
 
 [[package]]
 name = "derive-new"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "proc-macro2 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -139,7 +139,7 @@ name = "testcrate"
 version = "0.1.0"
 dependencies = [
  "compiletest_rs 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "derive-new 0.5.1",
+ "derive-new 0.5.2",
 ]
 
 [[package]]
