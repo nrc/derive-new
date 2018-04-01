@@ -197,7 +197,7 @@ fn new_impl(ast: &syn::DeriveInput,
             format!("Constructs a new `{}::{}`.", name, variant),
         ),
     };
-    new.span = proc_macro2::Span::call_site();
+    new.set_span(proc_macro2::Span::call_site());
     let lint_attrs = collect_parent_lint_attrs(&ast.attrs);
     let lint_attrs = my_quote![#(#lint_attrs),*];
     my_quote! {
