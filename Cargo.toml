@@ -10,9 +10,9 @@ repository = "https://github.com/nrc/derive-new"
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "0.2"
-quote = "0.4"
-syn = "0.12"
+proc-macro2 = "0.3"
+quote = "0.5"
+syn = "0.13"
 
 [workspace]
 members = ["testcrate"]
