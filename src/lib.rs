@@ -265,15 +265,18 @@ impl FieldAttr {
                 AttrStyle::Outer => {}
                 _ => continue,
             }
+            let last_attr_path = attr.path.segments.iter().last()
+                .expect("Expected at least one segment where #[segment[::segment*](..)]");
+            if (*last_attr_path).ident.as_ref() != "new" {
+                continue
+            }
             let meta = match attr.interpret_meta() {
                 Some(meta) => meta,
                 None => continue,
             };
             let list = match meta {
                 Meta::List(l) => l,
-                _ if meta.name() == "new" => {
-                    panic!("Invalid #[new] attribute, expected #[new(..)]");
-                }
+                _ if meta.name() == "new" => panic!("Invalid #[new] attribute, expected #[new(..)]"),
                 _ => continue,
             };
             if result.is_some() {

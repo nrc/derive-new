@@ -285,3 +285,9 @@ pub struct Upside { X: i32 }
 #[cfg_attr(test, allow(non_snake_case))]
 #[derive(new, PartialEq, Debug)]
 pub struct Down { X: i32 }
+
+#[derive(new, PartialEq, Debug)]
+pub struct All {
+    #[allow(missing_docs)]
+    pub x: i32
+}
