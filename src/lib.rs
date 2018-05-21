@@ -110,11 +110,11 @@
 #![recursion_limit = "192"]
 
 extern crate proc_macro;
-#[macro_use]
-extern crate syn;
+extern crate proc_macro2;
 #[macro_use]
 extern crate quote;
-extern crate proc_macro2;
+#[macro_use]
+extern crate syn;
 
 macro_rules! my_quote {
     ($($t:tt)*) => (quote_spanned!(proc_macro2::Span::call_site() => $($t)*))
@@ -136,7 +136,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
 fn new_for_struct(ast: &syn::DeriveInput,
                   fields: &syn::Fields,
-                  variant: Option<&syn::Ident>) -> quote::Tokens
+                  variant: Option<&syn::Ident>) -> proc_macro2::TokenStream
 {
     match *fields {
         syn::Fields::Named(ref fields) => {
@@ -151,7 +151,7 @@ fn new_for_struct(ast: &syn::DeriveInput,
     }
 }
 
-fn new_for_enum(ast: &syn::DeriveInput, data: &syn::DataEnum) -> quote::Tokens {
+fn new_for_enum(ast: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::TokenStream {
     if data.variants.is_empty() {
         panic!("#[derive(new)] cannot be implemented for enums with zero variants");
     }
@@ -166,7 +166,7 @@ fn new_for_enum(ast: &syn::DeriveInput, data: &syn::DataEnum) -> quote::Tokens {
 
 fn new_impl(ast: &syn::DeriveInput,
             fields: Option<&syn::punctuated::Punctuated<syn::Field, Token![,]>>,
-            named: bool, variant: Option<&syn::Ident>) -> quote::Tokens
+            named: bool, variant: Option<&syn::Ident>) -> proc_macro2::TokenStream
 {
     let name = &ast.ident;
     let unit = fields.is_none();
@@ -187,12 +187,15 @@ fn new_impl(ast: &syn::DeriveInput,
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
     let (mut new, qual, doc) = match variant {
         None => (
-            syn::Ident::from("new"),
+            syn::Ident::new("new", proc_macro2::Span::call_site()),
             my_quote!(),
             format!("Constructs a new `{}`.", name),
         ),
         Some(ref variant) => (
-            syn::Ident::from(format!("new_{}", to_snake_case(variant.as_ref()))),
+            syn::Ident::new(
+                &format!("new_{}", to_snake_case(&variant.to_string())),
+                proc_macro2::Span::call_site(),
+            ),
             my_quote!(::#variant),
             format!("Constructs a new `{}::{}`.", name, variant),
         ),
@@ -214,7 +217,7 @@ fn new_impl(ast: &syn::DeriveInput,
 fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
     fn is_lint(item: &syn::Meta) -> bool {
         if let syn::Meta::List(ref l) = *item {
-            match l.ident.as_ref() {
+            match l.ident.to_string().as_str() {
                 "allow" | "deny" | "forbid" | "warn" => return true,
                 _ => (),
             }
@@ -224,7 +227,7 @@ fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
 
     fn is_cfg_attr_lint(item: &syn::Meta) -> bool {
         if let syn::Meta::List(ref l) = *item {
-            if l.ident.as_ref() == "cfg_attr" && l.nested.len() == 2 {
+            if l.ident == "cfg_attr" && l.nested.len() == 2 {
                 if let syn::NestedMeta::Meta(ref item) = l.nested[1] {
                     return is_lint(item);
                 }
@@ -249,7 +252,7 @@ enum FieldAttr {
 }
 
 impl FieldAttr {
-    pub fn as_tokens(&self) -> quote::Tokens {
+    pub fn as_tokens(&self) -> proc_macro2::TokenStream {
         match *self {
             FieldAttr::Default => my_quote!(::std::default::Default::default()),
             FieldAttr::Value(ref s) => my_quote!(#s),
@@ -267,7 +270,7 @@ impl FieldAttr {
             }
             let last_attr_path = attr.path.segments.iter().last()
                 .expect("Expected at least one segment where #[segment[::segment*](..)]");
-            if (*last_attr_path).ident.as_ref() != "new" {
+            if (*last_attr_path).ident != "new" {
                 continue
             }
             let meta = match attr.interpret_meta() {
@@ -285,7 +288,7 @@ impl FieldAttr {
             for item in list.nested.iter() {
                 match *item {
                     NestedMeta::Meta(Meta::Word(ref ident)) => {
-                        if ident.as_ref() == "default" {
+                        if ident == "default" {
                             result = Some(FieldAttr::Default);
                         } else {
                             panic!("Invalid #[new] attribute: #[new({})]", ident);
@@ -293,7 +296,7 @@ impl FieldAttr {
                     },
                     NestedMeta::Meta(Meta::NameValue(ref kv)) => {
                         if let syn::Lit::Str(ref s) = kv.lit {
-                            if kv.ident.as_ref() == "value" {
+                            if kv.ident == "value" {
                                 let tokens = s.value().parse().ok()
                                     .expect(&format!(
                                         "Invalid expression in #[new]: `{}`", s.value()));
@@ -334,7 +337,7 @@ impl<'a> FieldExt<'a> {
             ident: if named {
                 field.ident.clone().unwrap()
             } else {
-                syn::Ident::from(format!("f{}", idx))
+                syn::Ident::new(&format!("f{}", idx), proc_macro2::Span::call_site())
             },
             named: named,
         }
@@ -348,7 +351,7 @@ impl<'a> FieldExt<'a> {
         match *self.ty {
             syn::Type::Path(syn::TypePath { qself: None, ref path }) => {
                 path.segments.last()
-                    .map(|x| x.value().ident.as_ref() == "PhantomData")
+                    .map(|x| x.value().ident == "PhantomData")
                     .unwrap_or(false)
             },
             _ => false,
@@ -359,13 +362,13 @@ impl<'a> FieldExt<'a> {
         !self.has_attr() && !self.is_phantom_data()
     }
 
-    pub fn as_arg(&self) -> quote::Tokens {
+    pub fn as_arg(&self) -> proc_macro2::TokenStream {
         let f_name = &self.ident;
         let ty = &self.ty;
         my_quote!(#f_name: #ty)
     }
 
-    pub fn as_init(&self) -> quote::Tokens {
+    pub fn as_init(&self) -> proc_macro2::TokenStream {
         let f_name = &self.ident;
         let init = if self.is_phantom_data() {
             my_quote!(::std::marker::PhantomData)
