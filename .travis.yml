@@ -1,13 +1,20 @@
+sudo: false
 language: rust
+
 matrix:
   include:
+    - rust: 1.15.1
     - rust: stable
     - rust: beta
     - rust: nightly
       script:
-        - cargo test
+        - cargo test --verbose
         - rm target/debug/deps/libderive_new-*.so
-        - cargo test --manifest-path testcrate/Cargo.toml
+        - cargo test --verbose --manifest-path testcrate/Cargo.toml
+
+env:
+  global:
+    - RUST_BACKTRACE=1
 
 script:
-  - cargo test
+  - cargo test --verbose
