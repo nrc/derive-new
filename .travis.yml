@@ -6,6 +6,7 @@ matrix:
     - rust: nightly
       script:
         - cargo test
+        - rm target/debug/deps/libderive_new-*.so
         - cargo test --manifest-path testcrate/Cargo.toml
 
 script:
