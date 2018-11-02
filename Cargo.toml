@@ -1,6 +1,6 @@
 [package]
 name = "derive-new"
-version = "0.5.5"
+version = "0.5.6"
 authors = ["Nick Cameron <ncameron@mozilla.com>"]
 description = "`#[derive(new)]` implements simple constructor functions for structs and enums."
 license = "MIT"
@@ -12,7 +12,7 @@ proc-macro = true
 [dependencies]
 proc-macro2 = "0.4"
 quote = "0.6"
-syn = "0.14"
+syn = "0.15"
 
 [workspace]
 members = ["testcrate"]
