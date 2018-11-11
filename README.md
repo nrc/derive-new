@@ -10,6 +10,8 @@ way to initialise a struct or an enum.
 Implementation uses macros 1.1 custom derive (which works in stable Rust from
 1.15 onwards).
 
+`#[no_std]` is fully supported if you switch off the default feature `"std"`.
+
 ## Examples
 
 Cargo.toml:
