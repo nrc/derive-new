@@ -37,7 +37,13 @@ pub struct Bar {
 #[test]
 fn test_simple_struct() {
     let x = Bar::new(42, "Hello".to_owned());
-    assert_eq!(x, Bar { x: 42, y: "Hello".to_owned() });
+    assert_eq!(
+        x,
+        Bar {
+            x: 42,
+            y: "Hello".to_owned()
+        }
+    );
 }
 
 /// A struct with a lifetime parameter.
@@ -53,7 +59,15 @@ pub struct Intersection<'scene> {
 fn test_struct_with_lifetime() {
     let b = Bar::new(42, "Hello".to_owned());
     let x = Intersection::new(&b, Foo::new(), Foo::new(), 42.0);
-    assert_eq!(x, Intersection { object: &b, normal: Foo {}, point: Foo {}, t: 42.0 });
+    assert_eq!(
+        x,
+        Intersection {
+            object: &b,
+            normal: Foo {},
+            point: Foo {},
+            t: 42.0
+        }
+    );
 }
 
 /// A struct with generics and bounds.
@@ -67,20 +81,42 @@ pub struct Qux<T: Debug + PartialEq, U: Debug + PartialEq> {
 #[test]
 fn test_struct_with_bounds() {
     let x = Qux::new("Hello!", Vec::<String>::new(), 42);
-    assert_eq!(x, Qux { f1: "Hello!", f2: vec![], f3: 42 });
+    assert_eq!(
+        x,
+        Qux {
+            f1: "Hello!",
+            f2: vec![],
+            f3: 42
+        }
+    );
 
     let x: Qux<&'static str, String> = Qux::new("Hello!", Vec::<String>::new(), 42);
-    assert_eq!(x, Qux { f1: "Hello!", f2: vec![], f3: 42 });
+    assert_eq!(
+        x,
+        Qux {
+            f1: "Hello!",
+            f2: vec![],
+            f3: 42
+        }
+    );
 
     let x = Qux::<_, String>::new("Hello!", vec![], 42);
-    assert_eq!(x, Qux { f1: "Hello!", f2: vec![], f3: 42 });
+    assert_eq!(
+        x,
+        Qux {
+            f1: "Hello!",
+            f2: vec![],
+            f3: 42
+        }
+    );
 }
 
 /// A struct with a lifetime parameter, generics and bounds.
 #[derive(new, PartialEq, Debug)]
 pub struct FooBar<'a, T, U>
-    where T: 'a + PartialEq + Debug,
-          U: Sized + Send + 'a + PartialEq + Debug
+where
+    T: 'a + PartialEq + Debug,
+    U: Sized + Send + 'a + PartialEq + Debug,
 {
     pub f1: Box<T>,
     pub f2: Vec<&'a U>,
@@ -91,7 +127,14 @@ pub struct FooBar<'a, T, U>
 fn test_struct_lifetime_bounds() {
     let a = 42;
     let x = FooBar::new(Box::new("Hello".to_owned()), vec![&a], 42);
-    assert_eq!(x, FooBar { f1: Box::new("Hello".to_owned()), f2: vec![&a], f3: 42 });
+    assert_eq!(
+        x,
+        FooBar {
+            f1: Box::new("Hello".to_owned()),
+            f2: vec![&a],
+            f3: 42
+        }
+    );
 }
 
 /// A tuple struct.
@@ -127,7 +170,14 @@ pub struct Waldo<T: PartialEq + Debug + Default> {
 #[test]
 fn test_struct_with_defaults() {
     let x = Waldo::<Vec<String>>::new(42);
-    assert_eq!(x, Waldo { x: 0, y: 42, z: vec![] });
+    assert_eq!(
+        x,
+        Waldo {
+            x: 0,
+            y: 42,
+            z: vec![]
+        }
+    );
 }
 
 /// A struct where fields have explicitly provided defaults.
@@ -143,7 +193,14 @@ pub struct Fred {
 #[test]
 fn test_struct_with_values() {
     let x = Fred::new("Fred".to_owned());
-    assert_eq!(x, Fred { x: 3, y: "Fred".to_owned(), z: vec![-42, 42] });
+    assert_eq!(
+        x,
+        Fred {
+            x: 3,
+            y: "Fred".to_owned(),
+            z: vec![-42, 42]
+        }
+    );
 }
 
 /// A struct with defaults and specified values.
@@ -158,7 +215,13 @@ pub struct Thud {
 #[test]
 fn test_struct_mixed_defaults() {
     let x = Thud::new();
-    assert_eq!(x, Thud { x: "Thud".to_owned(), y: String::new() });
+    assert_eq!(
+        x,
+        Thud {
+            x: "Thud".to_owned(),
+            y: String::new()
+        }
+    );
 }
 
 /// A generic struct with PhantomData member.
@@ -171,17 +234,21 @@ pub struct Bob<T: PartialEq + Debug> {
 #[test]
 fn test_struct_phantom_data() {
     let x = Bob::<i32>::new(42);
-    assert_eq!(x, Bob { a: 42, b: PhantomData });
+    assert_eq!(
+        x,
+        Bob {
+            a: 42,
+            b: PhantomData
+        }
+    );
 }
 
 /// A tuple struct where fields have default values.
 #[derive(new, PartialEq, Debug)]
 pub struct Boom<T: PartialEq + Debug + Default>(
-    #[new(default)]
-    pub i32,
+    #[new(default)] pub i32,
     pub u8,
-    #[new(default)]
-    pub T,
+    #[new(default)] pub T,
 );
 
 #[test]
@@ -193,11 +260,9 @@ fn test_tuple_with_defaults() {
 /// A tuple struct where fields have explicitly provided defaults.
 #[derive(new, PartialEq, Debug)]
 pub struct Moog(
-    #[new(value = "1 + 2")]
-    pub i32,
+    #[new(value = "1 + 2")] pub i32,
     pub String,
-    #[new(value = "vec![-42, 42]")]
-    pub Vec<i8>,
+    #[new(value = "vec![-42, 42]")] pub Vec<i8>,
 );
 
 #[test]
@@ -209,10 +274,8 @@ fn test_tuple_with_values() {
 /// A tuple struct with defaults and specified values.
 #[derive(new, PartialEq, Debug)]
 pub struct Crab(
-    #[new(value = r#""Thud".to_owned()"#)]
-    pub String,
-    #[new(default)]
-    pub String,
+    #[new(value = r#""Thud".to_owned()"#)] pub String,
+    #[new(default)] pub String,
 );
 
 #[test]
@@ -223,15 +286,12 @@ fn test_tuple_mixed_defaults() {
 
 /// A generic tuple struct with PhantomData member.
 #[derive(new, PartialEq, Debug)]
-pub struct Sponge<T: PartialEq + Debug>(
-    pub i32,
-    pub PhantomData<T>,
-);
+pub struct Sponge<T: PartialEq + Debug>(pub i32, pub PhantomData<T>);
 
 #[test]
 fn test_tuple_phantom_data() {
     let x = Sponge::<i32>::new(42);
-    assert_eq!(x,  Sponge(42, PhantomData));
+    assert_eq!(x, Sponge(42, PhantomData));
 }
 
 /// An enum with unit variants
@@ -255,10 +315,8 @@ fn test_enum_unit_variants() {
 pub enum Enterprise<T: PartialEq + Debug + Default> {
     Picard,
     Data(
-        #[new(value = "\"fascinating\".to_owned()")]
-        String,
-        #[new(default)]
-        T,
+        #[new(value = "\"fascinating\".to_owned()")] String,
+        #[new(default)] T,
     ),
     Spock {
         x: PhantomData<T>,
@@ -275,19 +333,29 @@ fn test_more_involved_enum() {
     assert_eq!(x, Enterprise::Data("fascinating".to_owned(), 0u8));
 
     let x = Enterprise::<u8>::new_spock(42);
-    assert_eq!(x, Enterprise::Spock { x: PhantomData, y: 42 });
+    assert_eq!(
+        x,
+        Enterprise::Spock {
+            x: PhantomData,
+            y: 42
+        }
+    );
 }
 
 #[allow(non_snake_case)]
 #[derive(new, PartialEq, Debug)]
-pub struct Upside { X: i32 }
+pub struct Upside {
+    X: i32,
+}
 
 #[cfg_attr(test, allow(non_snake_case))]
 #[derive(new, PartialEq, Debug)]
-pub struct Down { X: i32 }
+pub struct Down {
+    X: i32,
+}
 
 #[derive(new, PartialEq, Debug)]
 pub struct All {
     #[allow(missing_docs)]
-    pub x: i32
+    pub x: i32,
 }
