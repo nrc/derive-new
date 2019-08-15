@@ -118,8 +118,11 @@ macro_rules! my_quote {
     ($($t:tt)*) => (quote_spanned!(proc_macro2::Span::call_site() => $($t)*))
 }
 
+fn path_to_string(path: &syn::Path) -> String {
+    path.segments.iter().map(|s| s.ident.to_string()).collect::<Vec<String>>().join("::")
+}
+
 use proc_macro::TokenStream;
-use syn::token;
 use syn::Token;
 
 #[proc_macro_derive(new, attributes(new))]
@@ -215,17 +218,15 @@ fn new_impl(
 fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
     fn is_lint(item: &syn::Meta) -> bool {
         if let syn::Meta::List(ref l) = *item {
-            match l.ident.to_string().as_str() {
-                "allow" | "deny" | "forbid" | "warn" => return true,
-                _ => (),
-            }
+            let path = &l.path;
+            return path.is_ident("allow") || path.is_ident("deny") || path.is_ident("forbid") || path.is_ident("warn")
         }
         false
     }
 
     fn is_cfg_attr_lint(item: &syn::Meta) -> bool {
         if let syn::Meta::List(ref l) = *item {
-            if l.ident == "cfg_attr" && l.nested.len() == 2 {
+            if l.path.is_ident("cfg_attr") && l.nested.len() == 2 {
                 if let syn::NestedMeta::Meta(ref item) = l.nested[1] {
                     return is_lint(item);
                 }
@@ -236,7 +237,7 @@ fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
 
     attrs
         .iter()
-        .filter_map(|a| a.interpret_meta().map(|m| (m, a)))
+        .filter_map(|a| a.parse_meta().ok().map(|m| (m, a)))
         .filter(|&(ref m, _)| is_lint(m) || is_cfg_attr_lint(m))
         .map(|p| p.1)
         .cloned()
@@ -280,13 +281,13 @@ impl FieldAttr {
             if (*last_attr_path).ident != "new" {
                 continue;
             }
-            let meta = match attr.interpret_meta() {
-                Some(meta) => meta,
-                None => continue,
+            let meta = match attr.parse_meta() {
+                Ok(meta) => meta,
+                Err(_) => continue,
             };
             let list = match meta {
                 Meta::List(l) => l,
-                _ if meta.name() == "new" => {
+                _ if meta.path().is_ident("new") => {
                     panic!("Invalid #[new] attribute, expected #[new(..)]")
                 }
                 _ => continue,
@@ -296,32 +297,32 @@ impl FieldAttr {
             }
             for item in list.nested.iter() {
                 match *item {
-                    NestedMeta::Meta(Meta::Word(ref ident)) => {
-                        if ident == "default" {
+                    NestedMeta::Meta(Meta::Path(ref path)) => {
+                        if path.is_ident("default") {
                             result = Some(FieldAttr::Default);
                         } else {
-                            panic!("Invalid #[new] attribute: #[new({})]", ident);
+                            panic!("Invalid #[new] attribute: #[new({})]", path_to_string(&path));
                         }
                     }
                     NestedMeta::Meta(Meta::NameValue(ref kv)) => {
                         if let syn::Lit::Str(ref s) = kv.lit {
-                            if kv.ident == "value" {
+                            if kv.path.is_ident("value") {
                                 let tokens = s.value().parse().ok().expect(&format!(
                                     "Invalid expression in #[new]: `{}`",
                                     s.value()
                                 ));
                                 result = Some(FieldAttr::Value(tokens));
                             } else {
-                                panic!("Invalid #[new] attribute: #[new({} = ..)]", kv.ident);
+                                panic!("Invalid #[new] attribute: #[new({} = ..)]", path_to_string(&kv.path));
                             }
                         } else {
                             panic!("Non-string literal value in #[new] attribute");
                         }
                     }
                     NestedMeta::Meta(Meta::List(ref l)) => {
-                        panic!("Invalid #[new] attribute: #[new({}(..))]", l.ident);
+                        panic!("Invalid #[new] attribute: #[new({}(..))]", path_to_string(&l.path));
                     }
-                    NestedMeta::Literal(_) => {
+                    NestedMeta::Lit(_) => {
                         panic!("Invalid #[new] attribute: literal value in #[new(..)]");
                     }
                 }
@@ -364,7 +365,7 @@ impl<'a> FieldExt<'a> {
             }) => path
                 .segments
                 .last()
-                .map(|x| x.value().ident == "PhantomData")
+                .map(|x| x.ident == "PhantomData")
                 .unwrap_or(false),
             _ => false,
         }
