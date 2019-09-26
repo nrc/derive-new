@@ -123,6 +123,7 @@ fn path_to_string(path: &syn::Path) -> String {
 }
 
 use proc_macro::TokenStream;
+use proc_macro2::TokenStream as TokenStream2;
 use syn::Token;
 
 #[proc_macro_derive(new, attributes(new))]
@@ -307,7 +308,7 @@ impl FieldAttr {
                     NestedMeta::Meta(Meta::NameValue(ref kv)) => {
                         if let syn::Lit::Str(ref s) = kv.lit {
                             if kv.path.is_ident("value") {
-                                let tokens = s.value().parse().ok().expect(&format!(
+                                let tokens = lit_str_to_token_stream(s).ok().expect(&format!(
                                     "Invalid expression in #[new]: `{}`",
                                     s.value()
                                 ));
@@ -401,6 +402,23 @@ impl<'a> FieldExt<'a> {
             my_quote!(#init)
         }
     }
+}
+
+fn lit_str_to_token_stream(s: &syn::LitStr) -> Result<TokenStream2, proc_macro2::LexError> {
+    let code = s.value();
+    let ts: TokenStream2 = code.parse()?;
+    Ok(set_ts_span_recursive(ts, &s.span()))
+}
+
+fn set_ts_span_recursive(ts: TokenStream2, span: &proc_macro2::Span) -> TokenStream2 {
+    ts.into_iter().map(|mut tt| {
+        tt.set_span(span.clone());
+        if let proc_macro2::TokenTree::Group(group) = &mut tt {
+            let stream = set_ts_span_recursive(group.stream(), span);
+            *group = proc_macro2::Group::new(group.delimiter(), stream);
+        }
+        tt
+    }).collect()
 }
 
 fn to_snake_case(s: &str) -> String {
