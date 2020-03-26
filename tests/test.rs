@@ -3,9 +3,7 @@
 #[macro_use]
 extern crate derive_new;
 
-use std::default::Default;
 use std::fmt::Debug;
-use std::marker::PhantomData;
 
 /// A struct with no fields.
 #[derive(new, PartialEq, Debug)]
@@ -157,18 +155,22 @@ fn test_tuple_struct_lifetime() {
     assert_eq!(x, TupleWithLifetime("Hello"));
 }
 
-/// A struct where fields have default values.
-#[derive(new, PartialEq, Debug)]
-pub struct Waldo<T: PartialEq + Debug + Default> {
-    #[new(default)]
-    pub x: i32,
-    pub y: u8,
-    #[new(default)]
-    pub z: T,
-}
-
+#[cfg(feature = "std")]
 #[test]
 fn test_struct_with_defaults() {
+    use std::default::Default;
+
+    /// A struct where fields have default values.
+    #[derive(new, PartialEq, Debug)]
+    pub struct Waldo<T: PartialEq + Debug + Default> {
+        #[new(default)]
+        pub x: i32,
+        pub y: u8,
+        #[new(default)]
+        pub z: T,
+    }
+
+
     let x = Waldo::<Vec<String>>::new(42);
     assert_eq!(
         x,
@@ -203,17 +205,18 @@ fn test_struct_with_values() {
     );
 }
 
-/// A struct with defaults and specified values.
-#[derive(new, PartialEq, Debug)]
-pub struct Thud {
-    #[new(value = r#""Thud".to_owned()"#)]
-    pub x: String,
-    #[new(default)]
-    pub y: String,
-}
-
+#[cfg(feature = "std")]
 #[test]
 fn test_struct_mixed_defaults() {
+    /// A struct with defaults and specified values.
+    #[derive(new, PartialEq, Debug)]
+    pub struct Thud {
+        #[new(value = r#""Thud".to_owned()"#)]
+        pub x: String,
+        #[new(default)]
+        pub y: String,
+    }
+
     let x = Thud::new();
     assert_eq!(
         x,
@@ -224,15 +227,18 @@ fn test_struct_mixed_defaults() {
     );
 }
 
-/// A generic struct with PhantomData member.
-#[derive(new, PartialEq, Debug)]
-pub struct Bob<T: PartialEq + Debug> {
-    pub a: i32,
-    pub b: PhantomData<T>,
-}
 
+#[cfg(feature = "std")]
 #[test]
 fn test_struct_phantom_data() {
+    use std::marker::PhantomData;
+
+    /// A generic struct with PhantomData member.
+    #[derive(new, PartialEq, Debug)]
+    pub struct Bob<T: PartialEq + Debug> {
+        pub a: i32,
+        pub b: PhantomData<T>,
+    }
     let x = Bob::<i32>::new(42);
     assert_eq!(
         x,
@@ -243,16 +249,19 @@ fn test_struct_phantom_data() {
     );
 }
 
-/// A tuple struct where fields have default values.
-#[derive(new, PartialEq, Debug)]
-pub struct Boom<T: PartialEq + Debug + Default>(
-    #[new(default)] pub i32,
-    pub u8,
-    #[new(default)] pub T,
-);
-
+#[cfg(feature = "std")]
 #[test]
 fn test_tuple_with_defaults() {
+    use std::default::Default;
+
+    /// A tuple struct where fields have default values.
+    #[derive(new, PartialEq, Debug)]
+    pub struct Boom<T: PartialEq + Debug + Default>(
+        #[new(default)] pub i32,
+        pub u8,
+        #[new(default)] pub T,
+    );
+
     let x = Boom::<Vec<String>>::new(42);
     assert_eq!(x, Boom(0, 42, vec![]));
 }
@@ -271,25 +280,29 @@ fn test_tuple_with_values() {
     assert_eq!(x, Moog(3, "Fred".to_owned(), vec![-42, 42]));
 }
 
-/// A tuple struct with defaults and specified values.
-#[derive(new, PartialEq, Debug)]
-pub struct Crab(
-    #[new(value = r#""Thud".to_owned()"#)] pub String,
-    #[new(default)] pub String,
-);
-
+#[cfg(feature = "std")]
 #[test]
 fn test_tuple_mixed_defaults() {
+    /// A tuple struct with defaults and specified values.
+    #[derive(new, PartialEq, Debug)]
+    pub struct Crab(
+        #[new(value = r#""Thud".to_owned()"#)] pub String,
+        #[new(default)] pub String,
+    );
+
     let x = Crab::new();
     assert_eq!(x, Crab("Thud".to_owned(), String::new()));
 }
 
-/// A generic tuple struct with PhantomData member.
-#[derive(new, PartialEq, Debug)]
-pub struct Sponge<T: PartialEq + Debug>(pub i32, pub PhantomData<T>);
-
+#[cfg(feature = "std")]
 #[test]
 fn test_tuple_phantom_data() {
+    use std::marker::PhantomData;
+
+    /// A generic tuple struct with PhantomData member.
+    #[derive(new, PartialEq, Debug)]
+    pub struct Sponge<T: PartialEq + Debug>(pub i32, pub PhantomData<T>);
+
     let x = Sponge::<i32>::new(42);
     assert_eq!(x, Sponge(42, PhantomData));
 }
@@ -310,22 +323,26 @@ fn test_enum_unit_variants() {
     assert_eq!(x, Fizz::BiteMe);
 }
 
-/// A more involved enum
-#[derive(new, PartialEq, Debug)]
-pub enum Enterprise<T: PartialEq + Debug + Default> {
-    Picard,
-    Data(
-        #[new(value = "\"fascinating\".to_owned()")] String,
-        #[new(default)] T,
-    ),
-    Spock {
-        x: PhantomData<T>,
-        y: i32,
-    },
-}
-
+#[cfg(feature = "std")]
 #[test]
 fn test_more_involved_enum() {
+    use std::marker::PhantomData;
+    use std::default::Default;
+
+    /// A more involved enum
+    #[derive(new, PartialEq, Debug)]
+    pub enum Enterprise<T: PartialEq + Debug + Default> {
+        Picard,
+        Data(
+            #[new(value = "\"fascinating\".to_owned()")] String,
+            #[new(default)] T,
+        ),
+        Spock {
+            x: PhantomData<T>,
+            y: i32,
+        },
+    }
+
     let x = Enterprise::<u8>::new_picard();
     assert_eq!(x, Enterprise::Picard);
 
