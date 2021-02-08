@@ -1,6 +1,6 @@
 [package]
 name = "derive-new"
-version = "0.5.8"
+version = "0.5.9"
 authors = ["Nick Cameron <ncameron@mozilla.com>"]
 description = "`#[derive(new)]` implements simple constructor functions for structs and enums."
 license = "MIT"
