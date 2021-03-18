@@ -32,6 +32,16 @@ pub struct Bar {
     pub y: String,
 }
 
+#[derive(new)]
+#[new(const)]
+struct ConstFoo {
+    pub x: u8,
+    pub y: u8,
+    pub z: u8,
+}
+
+const CONST_FOO: ConstFoo = ConstFoo::new(1, 2, 3);
+
 #[test]
 fn test_simple_struct() {
     let x = Bar::new(42, "Hello".to_owned());
