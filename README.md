@@ -23,10 +23,17 @@ derive-new = "0.5"
 
 Include the macro:
 
-```rust
-#[macro_use]
-extern crate derive_new;
-```
+* Rust Edition 2015
+
+  ```rust
+  #[macro_use]
+  extern crate derive_new;
+  ```
+
+* Rust Edition 2018
+  ```rust
+  use derive_new::new;
+  ```
 
 Generating constructor for a simple struct:
 
