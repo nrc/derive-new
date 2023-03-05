@@ -253,7 +253,13 @@ enum FieldAttr {
 impl FieldAttr {
     pub fn as_tokens(&self) -> proc_macro2::TokenStream {
         match *self {
-            FieldAttr::Default => my_quote!(::core::default::Default::default()),
+            FieldAttr::Default => {
+                if cfg!(feature = "std") {
+                    my_quote!(::std::default::Default::default())
+                } else {
+                    my_quote!(::core::default::Default::default())
+                }
+            }
             FieldAttr::Value(ref s) => my_quote!(#s),
         }
     }
@@ -379,7 +385,11 @@ impl<'a> FieldExt<'a> {
     pub fn as_init(&self) -> proc_macro2::TokenStream {
         let f_name = &self.ident;
         let init = if self.is_phantom_data() {
-            my_quote!(::core::marker::PhantomData)
+            if cfg!(feature = "std") {
+                my_quote!(::std::marker::PhantomData)
+            } else {
+                my_quote!(::core::marker::PhantomData)
+            }
         } else {
             match self.attr {
                 None => my_quote!(#f_name),
