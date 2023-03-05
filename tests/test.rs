@@ -112,9 +112,9 @@ fn test_struct_with_bounds() {
 /// A struct with a lifetime parameter, generics and bounds.
 #[derive(new, PartialEq, Debug)]
 pub struct FooBar<'a, T, U>
-where
-    T: 'a + PartialEq + Debug,
-    U: Sized + Send + 'a + PartialEq + Debug,
+    where
+        T: 'a + PartialEq + Debug,
+        U: Sized + Send + 'a + PartialEq + Debug,
 {
     pub f1: Box<T>,
     pub f2: Vec<&'a U>,
@@ -169,7 +169,6 @@ fn test_struct_with_defaults() {
         #[new(default)]
         pub z: T,
     }
-
 
     let x = Waldo::<Vec<String>>::new(42);
     assert_eq!(
@@ -226,7 +225,6 @@ fn test_struct_mixed_defaults() {
         }
     );
 }
-
 
 #[cfg(feature = "std")]
 #[test]
@@ -326,8 +324,8 @@ fn test_enum_unit_variants() {
 #[cfg(feature = "std")]
 #[test]
 fn test_more_involved_enum() {
-    use std::marker::PhantomData;
     use std::default::Default;
+    use std::marker::PhantomData;
 
     /// A more involved enum
     #[derive(new, PartialEq, Debug)]

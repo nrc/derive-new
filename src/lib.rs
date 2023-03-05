@@ -23,7 +23,7 @@
 //!
 //! ```rust
 //! use derive_new::new;
-//! 
+//!
 //! fn main() {}
 //! ```
 //!
@@ -31,16 +31,14 @@
 //!
 //! ```rust
 //! use derive_new::new;
-//! 
+//!
 //! #[derive(new)]
 //! struct Bar {
 //!     a: i32,
 //!     b: String,
 //! }
 //!
-//! fn main() {
-//!   let _ = Bar::new(42, "Hello".to_owned());
-//! }
+//! let _ = Bar::new(42, "Hello".to_owned());
 //! ```
 //!
 //! Default values can be specified either via `#[new(default)]` attribute which removes
@@ -49,7 +47,7 @@
 //!
 //! ```rust
 //! use derive_new::new;
-//! 
+//!
 //! #[derive(new)]
 //! struct Foo {
 //!     x: bool,
@@ -59,9 +57,7 @@
 //!     z: Vec<String>,
 //! }
 //!
-//! fn main() {
-//!   let _ = Foo::new(true);
-//! }
+//! let _ = Foo::new(true);
 //! ```
 //!
 //! Generic types are supported; in particular, `PhantomData<T>` fields will be not
@@ -69,7 +65,7 @@
 //!
 //! ```rust
 //! use derive_new::new;
-//! 
+//!
 //! use std::marker::PhantomData;
 //!
 //! #[derive(new)]
@@ -80,9 +76,7 @@
 //!     z: T,
 //! }
 //!
-//! fn main() {
-//!   let _ = Generic::<i32, u8>::new("Hello");
-//! }
+//! let _ = Generic::<i32, u8>::new("Hello");
 //! ```
 //!
 //! For enums, one constructor method is generated for each variant, with the type
@@ -91,7 +85,7 @@
 //!
 //! ```rust
 //! use derive_new::new;
-//! 
+//!
 //! #[derive(new)]
 //! enum Enum {
 //!     FirstVariant,
@@ -99,11 +93,9 @@
 //!     ThirdVariant { x: i32, #[new(value = "vec![1]")] y: Vec<u8> }
 //! }
 //!
-//! fn main() {
-//!   let _ = Enum::new_first_variant();
-//!   let _ = Enum::new_second_variant(true);
-//!   let _ = Enum::new_third_variant(42);
-//! }
+//! let _ = Enum::new_first_variant();
+//! let _ = Enum::new_second_variant(true);
+//! let _ = Enum::new_third_variant(42);
 //! ```
 #![crate_type = "proc-macro"]
 #![recursion_limit = "192"]
@@ -119,11 +111,16 @@ macro_rules! my_quote {
 }
 
 fn path_to_string(path: &syn::Path) -> String {
-    path.segments.iter().map(|s| s.ident.to_string()).collect::<Vec<String>>().join("::")
+    path.segments
+        .iter()
+        .map(|s| s.ident.to_string())
+        .collect::<Vec<String>>()
+        .join("::")
 }
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
+use syn::punctuated::Punctuated;
 use syn::Token;
 
 #[proc_macro_derive(new, attributes(new))]
@@ -143,9 +140,9 @@ fn new_for_struct(
     variant: Option<&syn::Ident>,
 ) -> proc_macro2::TokenStream {
     match *fields {
-        syn::Fields::Named(ref fields) => new_impl(&ast, Some(&fields.named), true, variant),
-        syn::Fields::Unit => new_impl(&ast, None, false, variant),
-        syn::Fields::Unnamed(ref fields) => new_impl(&ast, Some(&fields.unnamed), false, variant),
+        syn::Fields::Named(ref fields) => new_impl(ast, Some(&fields.named), true, variant),
+        syn::Fields::Unit => new_impl(ast, None, false, variant),
+        syn::Fields::Unnamed(ref fields) => new_impl(ast, Some(&fields.unnamed), false, variant),
     }
 }
 
@@ -164,21 +161,24 @@ fn new_for_enum(ast: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
 
 fn new_impl(
     ast: &syn::DeriveInput,
-    fields: Option<&syn::punctuated::Punctuated<syn::Field, Token![,]>>,
+    fields: Option<&Punctuated<syn::Field, Token![,]>>,
     named: bool,
     variant: Option<&syn::Ident>,
 ) -> proc_macro2::TokenStream {
     let name = &ast.ident;
     let unit = fields.is_none();
-    let empty = Default::default();
+    let empty = Punctuated::default();
     let fields: Vec<_> = fields
         .unwrap_or(&empty)
         .iter()
         .enumerate()
         .map(|(i, f)| FieldExt::new(f, i, named))
         .collect();
-    let args = fields.iter().filter(|f| f.needs_arg()).map(|f| f.as_arg());
-    let inits = fields.iter().map(|f| f.as_init());
+    let args = fields
+        .iter()
+        .filter(|f| f.needs_arg())
+        .map(FieldExt::as_arg);
+    let inits = fields.iter().map(FieldExt::as_init);
     let inits = if unit {
         my_quote!()
     } else if named {
@@ -187,21 +187,25 @@ fn new_impl(
         my_quote![( #(#inits),* )]
     };
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
-    let (mut new, qual, doc) = match variant {
-        None => (
-            syn::Ident::new("new", proc_macro2::Span::call_site()),
-            my_quote!(),
-            format!("Constructs a new `{}`.", name),
-        ),
-        Some(ref variant) => (
-            syn::Ident::new(
-                &format!("new_{}", to_snake_case(&variant.to_string())),
-                proc_macro2::Span::call_site(),
-            ),
-            my_quote!(::#variant),
-            format!("Constructs a new `{}::{}`.", name, variant),
-        ),
-    };
+    let (mut new, qual, doc) = variant.as_ref().map_or_else(
+        || {
+            (
+                syn::Ident::new("new", proc_macro2::Span::call_site()),
+                my_quote!(),
+                format!("Constructs a new `{name}`."),
+            )
+        },
+        |variant| {
+            (
+                syn::Ident::new(
+                    &format!("new_{}", to_snake_case(&variant.to_string())),
+                    proc_macro2::Span::call_site(),
+                ),
+                my_quote!(::#variant),
+                format!("Constructs a new `{name}::{variant}`."),
+            )
+        },
+    );
     new.set_span(proc_macro2::Span::call_site());
     let lint_attrs = collect_parent_lint_attrs(&ast.attrs);
     let lint_attrs = my_quote![#(#lint_attrs),*];
@@ -220,7 +224,10 @@ fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
     fn is_lint(item: &syn::Meta) -> bool {
         if let syn::Meta::List(ref l) = *item {
             let path = &l.path;
-            return path.is_ident("allow") || path.is_ident("deny") || path.is_ident("forbid") || path.is_ident("warn")
+            return path.is_ident("allow")
+                || path.is_ident("deny")
+                || path.is_ident("forbid")
+                || path.is_ident("warn");
         }
         false
     }
@@ -239,7 +246,7 @@ fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
     attrs
         .iter()
         .filter_map(|a| a.parse_meta().ok().map(|m| (m, a)))
-        .filter(|&(ref m, _)| is_lint(m) || is_cfg_attr_lint(m))
+        .filter(|(m, _)| is_lint(m) || is_cfg_attr_lint(m))
         .map(|p| p.1)
         .cloned()
         .collect()
@@ -264,14 +271,14 @@ impl FieldAttr {
         }
     }
 
-    pub fn parse(attrs: &[syn::Attribute]) -> Option<FieldAttr> {
+    pub fn parse(attrs: &[syn::Attribute]) -> Option<Self> {
         use syn::{AttrStyle, Meta, NestedMeta};
 
         let mut result = None;
         for attr in attrs.iter() {
             match attr.style {
                 AttrStyle::Outer => {}
-                _ => continue,
+                AttrStyle::Inner(_) => continue,
             }
             let last_attr_path = attr
                 .path
@@ -279,13 +286,10 @@ impl FieldAttr {
                 .iter()
                 .last()
                 .expect("Expected at least one segment where #[segment[::segment*](..)]");
-            if (*last_attr_path).ident != "new" {
+            if last_attr_path.ident != "new" {
                 continue;
             }
-            let meta = match attr.parse_meta() {
-                Ok(meta) => meta,
-                Err(_) => continue,
-            };
+            let Ok(meta) = attr.parse_meta() else { continue };
             let list = match meta {
                 Meta::List(l) => l,
                 _ if meta.path().is_ident("new") => {
@@ -300,28 +304,33 @@ impl FieldAttr {
                 match *item {
                     NestedMeta::Meta(Meta::Path(ref path)) => {
                         if path.is_ident("default") {
-                            result = Some(FieldAttr::Default);
+                            result = Some(Self::Default);
                         } else {
-                            panic!("Invalid #[new] attribute: #[new({})]", path_to_string(&path));
+                            panic!("Invalid #[new] attribute: #[new({})]", path_to_string(path));
                         }
                     }
                     NestedMeta::Meta(Meta::NameValue(ref kv)) => {
                         if let syn::Lit::Str(ref s) = kv.lit {
                             if kv.path.is_ident("value") {
-                                let tokens = lit_str_to_token_stream(s).ok().expect(&format!(
-                                    "Invalid expression in #[new]: `{}`",
-                                    s.value()
-                                ));
-                                result = Some(FieldAttr::Value(tokens));
+                                let tokens = lit_str_to_token_stream(s).unwrap_or_else(|_| {
+                                    panic!("Invalid expression in #[new]: `{}`", s.value())
+                                });
+                                result = Some(Self::Value(tokens));
                             } else {
-                                panic!("Invalid #[new] attribute: #[new({} = ..)]", path_to_string(&kv.path));
+                                panic!(
+                                    "Invalid #[new] attribute: #[new({} = ..)]",
+                                    path_to_string(&kv.path)
+                                );
                             }
                         } else {
                             panic!("Non-string literal value in #[new] attribute");
                         }
                     }
                     NestedMeta::Meta(Meta::List(ref l)) => {
-                        panic!("Invalid #[new] attribute: #[new({}(..))]", path_to_string(&l.path));
+                        panic!(
+                            "Invalid #[new] attribute: #[new({}(..))]",
+                            path_to_string(&l.path)
+                        );
                     }
                     NestedMeta::Lit(_) => {
                         panic!("Invalid #[new] attribute: literal value in #[new(..)]");
@@ -348,26 +357,25 @@ impl<'a> FieldExt<'a> {
             ident: if named {
                 field.ident.clone().unwrap()
             } else {
-                syn::Ident::new(&format!("f{}", idx), proc_macro2::Span::call_site())
+                syn::Ident::new(&format!("f{idx}"), proc_macro2::Span::call_site())
             },
-            named: named,
+            named,
         }
     }
 
-    pub fn has_attr(&self) -> bool {
+    pub const fn has_attr(&self) -> bool {
         self.attr.is_some()
     }
 
     pub fn is_phantom_data(&self) -> bool {
         match *self.ty {
             syn::Type::Path(syn::TypePath {
-                qself: None,
-                ref path,
-            }) => path
+                                qself: None,
+                                ref path,
+                            }) => path
                 .segments
                 .last()
-                .map(|x| x.ident == "PhantomData")
-                .unwrap_or(false),
+                .map_or(false, |x| x.ident == "PhantomData"),
             _ => false,
         }
     }
@@ -391,10 +399,9 @@ impl<'a> FieldExt<'a> {
                 my_quote!(::core::marker::PhantomData)
             }
         } else {
-            match self.attr {
-                None => my_quote!(#f_name),
-                Some(ref attr) => attr.as_tokens(),
-            }
+            self.attr
+                .as_ref()
+                .map_or_else(|| my_quote!(#f_name), FieldAttr::as_tokens)
         };
         if self.named {
             my_quote!(#f_name: #init)
@@ -407,18 +414,20 @@ impl<'a> FieldExt<'a> {
 fn lit_str_to_token_stream(s: &syn::LitStr) -> Result<TokenStream2, proc_macro2::LexError> {
     let code = s.value();
     let ts: TokenStream2 = code.parse()?;
-    Ok(set_ts_span_recursive(ts, &s.span()))
+    Ok(set_ts_span_recursive(ts, s.span()))
 }
 
-fn set_ts_span_recursive(ts: TokenStream2, span: &proc_macro2::Span) -> TokenStream2 {
-    ts.into_iter().map(|mut tt| {
-        tt.set_span(span.clone());
-        if let proc_macro2::TokenTree::Group(group) = &mut tt {
-            let stream = set_ts_span_recursive(group.stream(), span);
-            *group = proc_macro2::Group::new(group.delimiter(), stream);
-        }
-        tt
-    }).collect()
+fn set_ts_span_recursive(ts: TokenStream2, span: proc_macro2::Span) -> TokenStream2 {
+    ts.into_iter()
+        .map(|mut tt| {
+            tt.set_span(span);
+            if let proc_macro2::TokenTree::Group(group) = &mut tt {
+                let stream = set_ts_span_recursive(group.stream(), span);
+                *group = proc_macro2::Group::new(group.delimiter(), stream);
+            }
+            tt
+        })
+        .collect()
 }
 
 fn to_snake_case(s: &str) -> String {
@@ -427,13 +436,12 @@ fn to_snake_case(s: &str) -> String {
             .fold((None, None, String::new()), |(prev, ch, mut acc), next| {
                 if let Some(ch) = ch {
                     if let Some(prev) = prev {
-                        if ch.is_uppercase() {
-                            if prev.is_lowercase()
-                                || prev.is_numeric()
-                                || (prev.is_uppercase() && next.is_lowercase())
-                            {
-                                acc.push('_');
-                            }
+                        if ch.is_uppercase()
+                            && (prev.is_lowercase()
+                            || prev.is_numeric()
+                            || (prev.is_uppercase() && next.is_lowercase()))
+                        {
+                            acc.push('_');
                         }
                     }
                     acc.extend(ch.to_lowercase());
