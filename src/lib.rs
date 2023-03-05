@@ -370,9 +370,9 @@ impl<'a> FieldExt<'a> {
     pub fn is_phantom_data(&self) -> bool {
         match *self.ty {
             syn::Type::Path(syn::TypePath {
-                                qself: None,
-                                ref path,
-                            }) => path
+                qself: None,
+                ref path,
+            }) => path
                 .segments
                 .last()
                 .map_or(false, |x| x.ident == "PhantomData"),
@@ -438,8 +438,8 @@ fn to_snake_case(s: &str) -> String {
                     if let Some(prev) = prev {
                         if ch.is_uppercase()
                             && (prev.is_lowercase()
-                            || prev.is_numeric()
-                            || (prev.is_uppercase() && next.is_lowercase()))
+                                || prev.is_numeric()
+                                || (prev.is_uppercase() && next.is_lowercase()))
                         {
                             acc.push('_');
                         }

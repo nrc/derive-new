@@ -112,9 +112,9 @@ fn test_struct_with_bounds() {
 /// A struct with a lifetime parameter, generics and bounds.
 #[derive(new, PartialEq, Debug)]
 pub struct FooBar<'a, T, U>
-    where
-        T: 'a + PartialEq + Debug,
-        U: Sized + Send + 'a + PartialEq + Debug,
+where
+    T: 'a + PartialEq + Debug,
+    U: Sized + Send + 'a + PartialEq + Debug,
 {
     pub f1: Box<T>,
     pub f2: Vec<&'a U>,
