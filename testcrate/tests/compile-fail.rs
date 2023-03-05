@@ -16,6 +16,7 @@ fn run_mode(mode: &'static str) {
     me.pop();
     config.build_base = me.join("tests").join(mode);
     config.filter = env::args().nth(1);
+    config.clean_rmeta();
 
     compiletest::run_tests(&config);
 }

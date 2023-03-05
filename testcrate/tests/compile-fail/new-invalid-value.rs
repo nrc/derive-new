@@ -8,3 +8,5 @@ struct Foo {
 //~^ ERROR expected one of
     x: i32,
 }
+
+fn main() {}
