@@ -4,8 +4,10 @@ use std::env;
 use std::path::PathBuf;
 
 fn run_mode(mode: &'static str) {
-    let mut config = compiletest::Config::default();
-    config.mode = mode.parse().expect("invalid mode");
+    let mut config = compiletest::Config {
+        mode: mode.parse().expect("invalid mode"),
+        ..Default::default()
+    };
     let mut me = env::current_exe().unwrap();
     me.pop();
     config.target_rustcflags = Some(format!("-L {}", me.display()));
