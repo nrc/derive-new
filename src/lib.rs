@@ -23,7 +23,7 @@
 //!
 //! ```rust
 //! use derive_new::new;
-//! 
+//!
 //! fn main() {}
 //! ```
 //!
@@ -31,7 +31,7 @@
 //!
 //! ```rust
 //! use derive_new::new;
-//! 
+//!
 //! #[derive(new)]
 //! struct Bar {
 //!     a: i32,
@@ -49,7 +49,7 @@
 //!
 //! ```rust
 //! use derive_new::new;
-//! 
+//!
 //! #[derive(new)]
 //! struct Foo {
 //!     x: bool,
@@ -69,7 +69,7 @@
 //!
 //! ```rust
 //! use derive_new::new;
-//! 
+//!
 //! use std::marker::PhantomData;
 //!
 //! #[derive(new)]
@@ -91,7 +91,7 @@
 //!
 //! ```rust
 //! use derive_new::new;
-//! 
+//!
 //! #[derive(new)]
 //! enum Enum {
 //!     FirstVariant,
@@ -124,7 +124,7 @@ fn path_to_string(path: &syn::Path) -> String {
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use syn::Token;
+use syn::{Token, punctuated::Punctuated};
 
 #[proc_macro_derive(new, attributes(new))]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -164,7 +164,7 @@ fn new_for_enum(ast: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
 
 fn new_impl(
     ast: &syn::DeriveInput,
-    fields: Option<&syn::punctuated::Punctuated<syn::Field, Token![,]>>,
+    fields: Option<&Punctuated<syn::Field, Token![,]>>,
     named: bool,
     variant: Option<&syn::Ident>,
 ) -> proc_macro2::TokenStream {
@@ -227,9 +227,11 @@ fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
 
     fn is_cfg_attr_lint(item: &syn::Meta) -> bool {
         if let syn::Meta::List(ref l) = *item {
-            if l.path.is_ident("cfg_attr") && l.nested.len() == 2 {
-                if let syn::NestedMeta::Meta(ref item) = l.nested[1] {
-                    return is_lint(item);
+            if l.path.is_ident("cfg_attr") {
+                if let Ok(nested) =
+                    l.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated)
+                {
+                    return nested.len() == 2 && is_lint(&nested[1]);
                 }
             }
         }
@@ -238,9 +240,7 @@ fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
 
     attrs
         .iter()
-        .filter_map(|a| a.parse_meta().ok().map(|m| (m, a)))
-        .filter(|&(ref m, _)| is_lint(m) || is_cfg_attr_lint(m))
-        .map(|p| p.1)
+        .filter(|a| is_lint(&a.meta) || is_cfg_attr_lint(&a.meta))
         .cloned()
         .collect()
 }
@@ -259,30 +259,23 @@ impl FieldAttr {
     }
 
     pub fn parse(attrs: &[syn::Attribute]) -> Option<FieldAttr> {
-        use syn::{AttrStyle, Meta, NestedMeta};
-
         let mut result = None;
         for attr in attrs.iter() {
             match attr.style {
-                AttrStyle::Outer => {}
+                syn::AttrStyle::Outer => {}
                 _ => continue,
             }
             let last_attr_path = attr
-                .path
+                .path()
                 .segments
-                .iter()
                 .last()
                 .expect("Expected at least one segment where #[segment[::segment*](..)]");
             if (*last_attr_path).ident != "new" {
                 continue;
             }
-            let meta = match attr.parse_meta() {
-                Ok(meta) => meta,
-                Err(_) => continue,
-            };
-            let list = match meta {
-                Meta::List(l) => l,
-                _ if meta.path().is_ident("new") => {
+            let list = match attr.meta {
+                syn::Meta::List(ref l) => l,
+                _ if attr.path().is_ident("new") => {
                     panic!("Invalid #[new] attribute, expected #[new(..)]")
                 }
                 _ => continue,
@@ -290,17 +283,20 @@ impl FieldAttr {
             if result.is_some() {
                 panic!("Expected at most one #[new] attribute");
             }
-            for item in list.nested.iter() {
-                match *item {
-                    NestedMeta::Meta(Meta::Path(ref path)) => {
+            for item in list
+                .parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated)
+                .unwrap_or_else(|err| panic!("Invalid #[new] attribute: {}", err))
+            {
+                match item {
+                    syn::Meta::Path(path) => {
                         if path.is_ident("default") {
                             result = Some(FieldAttr::Default);
                         } else {
                             panic!("Invalid #[new] attribute: #[new({})]", path_to_string(&path));
                         }
                     }
-                    NestedMeta::Meta(Meta::NameValue(ref kv)) => {
-                        if let syn::Lit::Str(ref s) = kv.lit {
+                    syn::Meta::NameValue(kv) => {
+                        if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(ref s), .. }) = kv.value {
                             if kv.path.is_ident("value") {
                                 let tokens = lit_str_to_token_stream(s).ok().expect(&format!(
                                     "Invalid expression in #[new]: `{}`",
@@ -314,11 +310,8 @@ impl FieldAttr {
                             panic!("Non-string literal value in #[new] attribute");
                         }
                     }
-                    NestedMeta::Meta(Meta::List(ref l)) => {
+                    syn::Meta::List(l) => {
                         panic!("Invalid #[new] attribute: #[new({}(..))]", path_to_string(&l.path));
-                    }
-                    NestedMeta::Lit(_) => {
-                        panic!("Invalid #[new] attribute: literal value in #[new(..)]");
                     }
                 }
             }
