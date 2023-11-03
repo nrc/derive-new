@@ -65,7 +65,7 @@ let _ = Foo::new(true);
 ```
 
 Generic types are supported; in particular, `PhantomData<T>` fields will be not
-included in the argument list and will be intialized automatically:
+included in the argument list and will be initialized automatically:
 
 ```rust
 use std::marker::PhantomData;

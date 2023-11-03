@@ -2,7 +2,7 @@
 extern crate derive_new;
 
 #[derive(new)]
-//~^ ERROR produced unparseable tokens
+//~^ ERROR produced unparsable tokens
 struct Foo {
     #[new(value = "hello@world")]
 //~^ ERROR expected one of
