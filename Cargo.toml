@@ -1,10 +1,11 @@
 [package]
 name = "derive-new"
-version = "0.5.9"
-authors = ["Nick Cameron <ncameron@mozilla.com>"]
+version = "0.6.0"
+authors = ["Nick Cameron <nrc@ncameron.org>"]
 description = "`#[derive(new)]` implements simple constructor functions for structs and enums."
 license = "MIT"
 repository = "https://github.com/nrc/derive-new"
+edition = "2021"
 
 [lib]
 proc-macro = true
