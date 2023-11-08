@@ -162,12 +162,48 @@ fn new_for_enum(ast: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
     my_quote!(#(#impls)*)
 }
 
+fn parse_derive_new_attr(attrs: &[syn::Attribute]) -> bool {
+    let mut is_const = false;
+
+    for i in attrs {
+        if let Ok(meta) = i.parse_meta() {
+            if !meta.path().is_ident("new") {
+                continue;
+            }
+            let list = match meta {
+                syn::Meta::List(l) => l,
+                _ => panic!("Invalid #[new] attribute, expected #[new(..)]")
+            };
+            for item in list.nested.iter() {
+                match *item {
+                    syn::NestedMeta::Meta(syn::Meta::Path(ref path)) => {
+                        if path.is_ident("const") {
+                            is_const = true;
+                            continue;
+                        }
+                    }
+                    _ => {},
+                }
+                panic!("Invalid #[new] attribute");
+            }
+        }
+    }
+
+    is_const
+}
+
 fn new_impl(
     ast: &syn::DeriveInput,
     fields: Option<&Punctuated<syn::Field, Token![,]>>,
     named: bool,
     variant: Option<&syn::Ident>,
 ) -> proc_macro2::TokenStream {
+    let is_const = parse_derive_new_attr(&ast.attrs);
+    let const_opt = if is_const {
+        my_quote!(const)
+    } else {
+        my_quote!()
+    };
     let name = &ast.ident;
     let unit = fields.is_none();
     let empty = Default::default();
@@ -209,7 +245,7 @@ fn new_impl(
         impl #impl_generics #name #ty_generics #where_clause {
             #[doc = #doc]
             #lint_attrs
-            pub fn #new(#(#args),*) -> Self {
+            pub #const_opt fn #new(#(#args),*) -> Self {
                 #name #qual #inits
             }
         }
