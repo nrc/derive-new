@@ -64,6 +64,33 @@ struct Foo {
 let _ = Foo::new(true);
 ```
 
+To make type conversion easier, `#[new(into)]` attribute changes the parameter type
+to `impl Into<T>`, and populates the field with `value.into()`:
+
+```rust
+#[derive(new)]
+struct Foo {
+    #[new(into)]
+    x: String,
+}
+
+let _ = Foo::new("Hello");
+```
+
+For iterators/collections, `#[new(into_iter = "T")]` attribute changes the parameter type
+to `impl IntoIterator<Item = T>`, and populates the field with `value.into_iter().collect()`:
+
+```rust
+#[derive(new)]
+struct Foo {
+    #[new(into_iter = "bool")]
+    x: Vec<bool>,
+}
+
+let _ = Foo::new([true, false]);
+let _ = Foo::new(Some(true));
+```
+
 Generic types are supported; in particular, `PhantomData<T>` fields will be not
 included in the argument list and will be initialized automatically:
 

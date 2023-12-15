@@ -10,3 +10,5 @@ struct Foo {
     #[new(value = "42")]
     y: i32,
 }
+
+fn main() {}

@@ -64,6 +64,33 @@
 //! }
 //! ```
 //!
+//! To make type conversion easier, `#[new(into)]` attribute changes the parameter type
+//! to `impl Into<T>`, and populates the field with `value.into()`:
+//!
+//! ```rust
+//! #[derive(new)]
+//! struct Foo {
+//!     #[new(into)]
+//!     x: String,
+//! }
+//!
+//! let _ = Foo::new("Hello");
+//! ```
+//!
+//! For iterators/collections, `#[new(into_iter = "T")]` attribute changes the parameter type
+//! to `impl IntoIterator<Item = T>`, and populates the field with `value.into_iter().collect()`:
+//!
+//! ```rust
+//! #[derive(new)]
+//! struct Foo {
+//!     #[new(into_iter = "bool")]
+//!     x: Vec<bool>,
+//! }
+//!
+//! let _ = Foo::new([true, false]);
+//! let _ = Foo::new(Some(true));
+//! ```
+//!
 //! Generic types are supported; in particular, `PhantomData<T>` fields will be not
 //! included in the argument list and will be initialized automatically:
 //!
@@ -119,12 +146,16 @@ macro_rules! my_quote {
 }
 
 fn path_to_string(path: &syn::Path) -> String {
-    path.segments.iter().map(|s| s.ident.to_string()).collect::<Vec<String>>().join("::")
+    path.segments
+        .iter()
+        .map(|s| s.ident.to_string())
+        .collect::<Vec<String>>()
+        .join("::")
 }
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use syn::{Token, punctuated::Punctuated};
+use syn::{punctuated::Punctuated, Token};
 
 #[proc_macro_derive(new, attributes(new))]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -177,7 +208,7 @@ fn new_impl(
         .enumerate()
         .map(|(i, f)| FieldExt::new(f, i, named))
         .collect();
-    let args = fields.iter().filter(|f| f.needs_arg()).map(|f| f.as_arg());
+    let args = fields.iter().filter_map(|f| f.as_arg());
     let inits = fields.iter().map(|f| f.as_init());
     let inits = if unit {
         my_quote!()
@@ -220,7 +251,10 @@ fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
     fn is_lint(item: &syn::Meta) -> bool {
         if let syn::Meta::List(ref l) = *item {
             let path = &l.path;
-            return path.is_ident("allow") || path.is_ident("deny") || path.is_ident("forbid") || path.is_ident("warn")
+            return path.is_ident("allow")
+                || path.is_ident("deny")
+                || path.is_ident("forbid")
+                || path.is_ident("warn");
         }
         false
     }
@@ -247,13 +281,19 @@ fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
 
 enum FieldAttr {
     Default,
+    Into,
+    IntoIter(proc_macro2::TokenStream),
     Value(proc_macro2::TokenStream),
 }
 
 impl FieldAttr {
-    pub fn as_tokens(&self) -> proc_macro2::TokenStream {
+    pub fn as_tokens(&self, name: &syn::Ident) -> proc_macro2::TokenStream {
         match *self {
             FieldAttr::Default => my_quote!(::core::default::Default::default()),
+            FieldAttr::Into => my_quote!(::core::convert::Into::into(#name)),
+            FieldAttr::IntoIter(_) => {
+                my_quote!(::core::iter::Iterator::collect(::core::iter::IntoIterator::into_iter(#name)))
+            }
             FieldAttr::Value(ref s) => my_quote!(#s),
         }
     }
@@ -288,30 +328,49 @@ impl FieldAttr {
                 .unwrap_or_else(|err| panic!("Invalid #[new] attribute: {}", err))
             {
                 match item {
-                    syn::Meta::Path(path) => {
-                        if path.is_ident("default") {
+                    syn::Meta::Path(path) => match path.get_ident() {
+                        Some(ident) if ident == "default" => {
                             result = Some(FieldAttr::Default);
-                        } else {
-                            panic!("Invalid #[new] attribute: #[new({})]", path_to_string(&path));
                         }
-                    }
+                        Some(ident) if ident == "into" => {
+                            result = Some(FieldAttr::Into);
+                        }
+                        _ => panic!(
+                            "Invalid #[new] attribute: #[new({})]",
+                            path_to_string(&path)
+                        ),
+                    },
                     syn::Meta::NameValue(kv) => {
-                        if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(ref s), .. }) = kv.value {
-                            if kv.path.is_ident("value") {
-                                let tokens = lit_str_to_token_stream(s).ok().expect(&format!(
-                                    "Invalid expression in #[new]: `{}`",
-                                    s.value()
-                                ));
-                                result = Some(FieldAttr::Value(tokens));
-                            } else {
-                                panic!("Invalid #[new] attribute: #[new({} = ..)]", path_to_string(&kv.path));
+                        if let syn::Expr::Lit(syn::ExprLit {
+                            lit: syn::Lit::Str(ref s),
+                            ..
+                        }) = kv.value
+                        {
+                            let tokens = lit_str_to_token_stream(s)
+                                .ok()
+                                .expect(&format!("Invalid expression in #[new]: `{}`", s.value()));
+
+                            match kv.path.get_ident() {
+                                Some(ident) if ident == "into_iter" => {
+                                    result = Some(FieldAttr::IntoIter(tokens));
+                                }
+                                Some(ident) if ident == "value" => {
+                                    result = Some(FieldAttr::Value(tokens));
+                                }
+                                _ => panic!(
+                                    "Invalid #[new] attribute: #[new({} = ..)]",
+                                    path_to_string(&kv.path)
+                                ),
                             }
                         } else {
                             panic!("Non-string literal value in #[new] attribute");
                         }
                     }
                     syn::Meta::List(l) => {
-                        panic!("Invalid #[new] attribute: #[new({}(..))]", path_to_string(&l.path));
+                        panic!(
+                            "Invalid #[new] attribute: #[new({}(..))]",
+                            path_to_string(&l.path)
+                        );
                     }
                 }
             }
@@ -341,10 +400,6 @@ impl<'a> FieldExt<'a> {
         }
     }
 
-    pub fn has_attr(&self) -> bool {
-        self.attr.is_some()
-    }
-
     pub fn is_phantom_data(&self) -> bool {
         match *self.ty {
             syn::Type::Path(syn::TypePath {
@@ -359,14 +414,23 @@ impl<'a> FieldExt<'a> {
         }
     }
 
-    pub fn needs_arg(&self) -> bool {
-        !self.has_attr() && !self.is_phantom_data()
-    }
+    pub fn as_arg(&self) -> Option<proc_macro2::TokenStream> {
+        if self.is_phantom_data() {
+            return None;
+        }
 
-    pub fn as_arg(&self) -> proc_macro2::TokenStream {
-        let f_name = &self.ident;
+        let ident = &self.ident;
         let ty = &self.ty;
-        my_quote!(#f_name: #ty)
+
+        match self.attr {
+            Some(FieldAttr::Default) => None,
+            Some(FieldAttr::Into) => Some(my_quote!(#ident: impl ::core::convert::Into<#ty>)),
+            Some(FieldAttr::IntoIter(ref s)) => {
+                Some(my_quote!(#ident: impl ::core::iter::IntoIterator<Item = #s>))
+            }
+            Some(FieldAttr::Value(_)) => None,
+            None => Some(my_quote!(#ident: #ty)),
+        }
     }
 
     pub fn as_init(&self) -> proc_macro2::TokenStream {
@@ -376,7 +440,7 @@ impl<'a> FieldExt<'a> {
         } else {
             match self.attr {
                 None => my_quote!(#f_name),
-                Some(ref attr) => attr.as_tokens(),
+                Some(ref attr) => attr.as_tokens(f_name),
             }
         };
         if self.named {
@@ -394,14 +458,16 @@ fn lit_str_to_token_stream(s: &syn::LitStr) -> Result<TokenStream2, proc_macro2:
 }
 
 fn set_ts_span_recursive(ts: TokenStream2, span: &proc_macro2::Span) -> TokenStream2 {
-    ts.into_iter().map(|mut tt| {
-        tt.set_span(span.clone());
-        if let proc_macro2::TokenTree::Group(group) = &mut tt {
-            let stream = set_ts_span_recursive(group.stream(), span);
-            *group = proc_macro2::Group::new(group.delimiter(), stream);
-        }
-        tt
-    }).collect()
+    ts.into_iter()
+        .map(|mut tt| {
+            tt.set_span(span.clone());
+            if let proc_macro2::TokenTree::Group(group) = &mut tt {
+                let stream = set_ts_span_recursive(group.stream(), span);
+                *group = proc_macro2::Group::new(group.delimiter(), stream);
+            }
+            tt
+        })
+        .collect()
 }
 
 fn to_snake_case(s: &str) -> String {

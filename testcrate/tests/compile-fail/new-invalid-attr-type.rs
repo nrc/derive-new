@@ -8,3 +8,5 @@ struct Foo {
     #[new = "foo"]
     x: i32,
 }
+
+fn main() {}

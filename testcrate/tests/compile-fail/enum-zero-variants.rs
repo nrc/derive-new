@@ -5,3 +5,5 @@ extern crate derive_new;
 //~^ ERROR proc-macro derive
 //~^^ HELP #[derive(new)] cannot be implemented for enums with zero variants
 enum Enum {}
+
+fn main() {}
