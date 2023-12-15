@@ -182,6 +182,49 @@ fn test_struct_with_defaults() {
     );
 }
 
+#[cfg(feature = "std")]
+#[test]
+fn test_struct_with_into() {
+    #[derive(new, PartialEq, Debug)]
+    pub struct Foo {
+        #[new(into)]
+        pub value: String,
+    }
+
+    assert_eq!(
+        Foo::new("bar"),
+        Foo {
+            value: "bar".to_string(),
+        }
+    );
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn test_struct_with_into_iter() {
+    #[derive(new, PartialEq, Debug)]
+    pub struct Foo {
+        #[new(into_iter = "bool")]
+        pub values: Vec<bool>,
+    }
+
+    assert_eq!(
+        Foo::new([true, false, true]),
+        Foo {
+            values: vec![true, false, true]
+        }
+    );
+
+    assert_eq!(
+        Foo::new(Some(false)),
+        Foo {
+            values: vec![false]
+        }
+    );
+
+    assert_eq!(Foo::new(None), Foo { values: vec![] });
+}
+
 /// A struct where fields have explicitly provided defaults.
 #[derive(new, PartialEq, Debug)]
 pub struct Fred {
