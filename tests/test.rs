@@ -170,7 +170,6 @@ fn test_struct_with_defaults() {
         pub z: T,
     }
 
-
     let x = Waldo::<Vec<String>>::new(42);
     assert_eq!(
         x,
@@ -226,7 +225,6 @@ fn test_struct_mixed_defaults() {
         }
     );
 }
-
 
 #[cfg(feature = "std")]
 #[test]
@@ -326,8 +324,8 @@ fn test_enum_unit_variants() {
 #[cfg(feature = "std")]
 #[test]
 fn test_more_involved_enum() {
-    use std::marker::PhantomData;
     use std::default::Default;
+    use std::marker::PhantomData;
 
     /// A more involved enum
     #[derive(new, PartialEq, Debug)]

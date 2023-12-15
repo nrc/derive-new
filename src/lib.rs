@@ -119,12 +119,16 @@ macro_rules! my_quote {
 }
 
 fn path_to_string(path: &syn::Path) -> String {
-    path.segments.iter().map(|s| s.ident.to_string()).collect::<Vec<String>>().join("::")
+    path.segments
+        .iter()
+        .map(|s| s.ident.to_string())
+        .collect::<Vec<String>>()
+        .join("::")
 }
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use syn::{Token, punctuated::Punctuated};
+use syn::{punctuated::Punctuated, Token};
 
 #[proc_macro_derive(new, attributes(new))]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -220,7 +224,10 @@ fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
     fn is_lint(item: &syn::Meta) -> bool {
         if let syn::Meta::List(ref l) = *item {
             let path = &l.path;
-            return path.is_ident("allow") || path.is_ident("deny") || path.is_ident("forbid") || path.is_ident("warn")
+            return path.is_ident("allow")
+                || path.is_ident("deny")
+                || path.is_ident("forbid")
+                || path.is_ident("warn");
         }
         false
     }
@@ -292,11 +299,18 @@ impl FieldAttr {
                         if path.is_ident("default") {
                             result = Some(FieldAttr::Default);
                         } else {
-                            panic!("Invalid #[new] attribute: #[new({})]", path_to_string(&path));
+                            panic!(
+                                "Invalid #[new] attribute: #[new({})]",
+                                path_to_string(&path)
+                            );
                         }
                     }
                     syn::Meta::NameValue(kv) => {
-                        if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(ref s), .. }) = kv.value {
+                        if let syn::Expr::Lit(syn::ExprLit {
+                            lit: syn::Lit::Str(ref s),
+                            ..
+                        }) = kv.value
+                        {
                             if kv.path.is_ident("value") {
                                 let tokens = lit_str_to_token_stream(s).ok().expect(&format!(
                                     "Invalid expression in #[new]: `{}`",
@@ -304,14 +318,20 @@ impl FieldAttr {
                                 ));
                                 result = Some(FieldAttr::Value(tokens));
                             } else {
-                                panic!("Invalid #[new] attribute: #[new({} = ..)]", path_to_string(&kv.path));
+                                panic!(
+                                    "Invalid #[new] attribute: #[new({} = ..)]",
+                                    path_to_string(&kv.path)
+                                );
                             }
                         } else {
                             panic!("Non-string literal value in #[new] attribute");
                         }
                     }
                     syn::Meta::List(l) => {
-                        panic!("Invalid #[new] attribute: #[new({}(..))]", path_to_string(&l.path));
+                        panic!(
+                            "Invalid #[new] attribute: #[new({}(..))]",
+                            path_to_string(&l.path)
+                        );
                     }
                 }
             }
@@ -394,14 +414,16 @@ fn lit_str_to_token_stream(s: &syn::LitStr) -> Result<TokenStream2, proc_macro2:
 }
 
 fn set_ts_span_recursive(ts: TokenStream2, span: &proc_macro2::Span) -> TokenStream2 {
-    ts.into_iter().map(|mut tt| {
-        tt.set_span(span.clone());
-        if let proc_macro2::TokenTree::Group(group) = &mut tt {
-            let stream = set_ts_span_recursive(group.stream(), span);
-            *group = proc_macro2::Group::new(group.delimiter(), stream);
-        }
-        tt
-    }).collect()
+    ts.into_iter()
+        .map(|mut tt| {
+            tt.set_span(span.clone());
+            if let proc_macro2::TokenTree::Group(group) = &mut tt {
+                let stream = set_ts_span_recursive(group.stream(), span);
+                *group = proc_macro2::Group::new(group.delimiter(), stream);
+            }
+            tt
+        })
+        .collect()
 }
 
 fn to_snake_case(s: &str) -> String {
