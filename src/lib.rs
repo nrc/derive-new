@@ -105,6 +105,60 @@
 //!   let _ = Enum::new_third_variant(42);
 //! }
 //! ```
+//! ### Setting Visibility for the Constructor
+//!
+//! By default, the generated constructor will be `pub`. However, you can control the visibility of the constructor using the `#[new(visibility = "...")]` attribute.
+//!
+//! #### Public Constructor (default)
+//!
+//! ```rust
+//! use derive_new::new;
+//!
+//! #[derive(new)]
+//! pub struct Bar {
+//!     a: i32,
+//!     b: String,
+//! }
+//!
+//! fn main() {
+//!   let _ = Bar::new(42, "Hello".to_owned());
+//! }
+//! ```
+//!
+//! #### Crate-Visible Constructor
+//!
+//! ```rust
+//! use derive_new::new;
+//!
+//! #[derive(new)]
+//! #[new(visibility = "pub(crate)")]
+//! pub struct Bar {
+//!     a: i32,
+//!     b: String,
+//! }
+//!
+//! fn main() {
+//!   let _ = Bar::new(42, "Hello".to_owned());
+//! }
+//! ```
+//!
+//! #### Private Constructor
+//!
+//! ```rust
+//! use derive_new::new;
+//!
+//! #[derive(new)]
+//! #[new(visibility = "")]
+//! pub struct Bar {
+//!     a: i32,
+//!     b: String,
+//! }
+//!
+//! fn main() {
+//!   // Bar::new is not accessible here as it is private
+//!   let _ = Bar::new(42, "Hello".to_owned()); // This will cause a compile error
+//! }
+//! ```
 #![crate_type = "proc-macro"]
 #![recursion_limit = "192"]
 
