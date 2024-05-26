@@ -270,7 +270,10 @@ struct NewOptions {
 
 impl NewOptions {
     fn from_attributes(attrs: &[Attribute]) -> Self {
-        let mut visibility = None;
+        // Default visibility is public
+        let mut visibility = Some(Visibility::Public(syn::token::Pub {
+            span: proc_macro2::Span::call_site(),
+        }));
 
         for attr in attrs {
             if attr.path().is_ident("new") {
