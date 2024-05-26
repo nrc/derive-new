@@ -119,19 +119,24 @@ macro_rules! my_quote {
 }
 
 fn path_to_string(path: &syn::Path) -> String {
-    path.segments.iter().map(|s| s.ident.to_string()).collect::<Vec<String>>().join("::")
+    path.segments
+        .iter()
+        .map(|s| s.ident.to_string())
+        .collect::<Vec<String>>()
+        .join("::")
 }
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use syn::{Token, punctuated::Punctuated};
+use syn::{punctuated::Punctuated, Attribute, Lit, Token, Visibility};
 
 #[proc_macro_derive(new, attributes(new))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).expect("Couldn't parse item");
+    let options = NewOptions::from_attributes(&ast.attrs);
     let result = match ast.data {
-        syn::Data::Enum(ref e) => new_for_enum(&ast, e),
-        syn::Data::Struct(ref s) => new_for_struct(&ast, &s.fields, None),
+        syn::Data::Enum(ref e) => new_for_enum(&ast, e, &options),
+        syn::Data::Struct(ref s) => new_for_struct(&ast, &s.fields, None, &options),
         syn::Data::Union(_) => panic!("doesn't work with unions yet"),
     };
     result.into()
@@ -141,15 +146,24 @@ fn new_for_struct(
     ast: &syn::DeriveInput,
     fields: &syn::Fields,
     variant: Option<&syn::Ident>,
+    options: &NewOptions,
 ) -> proc_macro2::TokenStream {
     match *fields {
-        syn::Fields::Named(ref fields) => new_impl(&ast, Some(&fields.named), true, variant),
-        syn::Fields::Unit => new_impl(&ast, None, false, variant),
-        syn::Fields::Unnamed(ref fields) => new_impl(&ast, Some(&fields.unnamed), false, variant),
+        syn::Fields::Named(ref fields) => {
+            new_impl(ast, Some(&fields.named), true, variant, options)
+        }
+        syn::Fields::Unit => new_impl(ast, None, false, variant, options),
+        syn::Fields::Unnamed(ref fields) => {
+            new_impl(ast, Some(&fields.unnamed), false, variant, options)
+        }
     }
 }
 
-fn new_for_enum(ast: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::TokenStream {
+fn new_for_enum(
+    ast: &syn::DeriveInput,
+    data: &syn::DataEnum,
+    options: &NewOptions,
+) -> proc_macro2::TokenStream {
     if data.variants.is_empty() {
         panic!("#[derive(new)] cannot be implemented for enums with zero variants");
     }
@@ -157,7 +171,7 @@ fn new_for_enum(ast: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
         if v.discriminant.is_some() {
             panic!("#[derive(new)] cannot be implemented for enums with discriminants");
         }
-        new_for_struct(ast, &v.fields, Some(&v.ident))
+        new_for_struct(ast, &v.fields, Some(&v.ident), options)
     });
     my_quote!(#(#impls)*)
 }
@@ -167,6 +181,7 @@ fn new_impl(
     fields: Option<&Punctuated<syn::Field, Token![,]>>,
     named: bool,
     variant: Option<&syn::Ident>,
+    options: &NewOptions,
 ) -> proc_macro2::TokenStream {
     let name = &ast.ident;
     let unit = fields.is_none();
@@ -205,11 +220,12 @@ fn new_impl(
     new.set_span(proc_macro2::Span::call_site());
     let lint_attrs = collect_parent_lint_attrs(&ast.attrs);
     let lint_attrs = my_quote![#(#lint_attrs),*];
+    let visibility = &options.visibility;
     my_quote! {
         impl #impl_generics #name #ty_generics #where_clause {
             #[doc = #doc]
             #lint_attrs
-            pub fn #new(#(#args),*) -> Self {
+            #visibility fn #new(#(#args),*) -> Self {
                 #name #qual #inits
             }
         }
@@ -220,7 +236,10 @@ fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
     fn is_lint(item: &syn::Meta) -> bool {
         if let syn::Meta::List(ref l) = *item {
             let path = &l.path;
-            return path.is_ident("allow") || path.is_ident("deny") || path.is_ident("forbid") || path.is_ident("warn")
+            return path.is_ident("allow")
+                || path.is_ident("deny")
+                || path.is_ident("forbid")
+                || path.is_ident("warn");
         }
         false
     }
@@ -243,6 +262,38 @@ fn collect_parent_lint_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
         .filter(|a| is_lint(&a.meta) || is_cfg_attr_lint(&a.meta))
         .cloned()
         .collect()
+}
+
+struct NewOptions {
+    visibility: Option<syn::Visibility>,
+}
+
+impl NewOptions {
+    fn from_attributes(attrs: &[Attribute]) -> Self {
+        let mut visibility = None;
+
+        for attr in attrs {
+            if attr.path().is_ident("new") {
+                attr.parse_nested_meta(|meta| {
+                    if meta.path.is_ident("visibility") {
+                        let value: Lit = meta.value()?.parse()?;
+                        if let Lit::Str(lit_str) = value {
+                            // Parse the visibility string into a syn::Visibility type
+                            let parsed_visibility: Visibility =
+                                lit_str.parse().expect("Invalid visibility");
+                            visibility = Some(parsed_visibility);
+                        }
+                        Ok(())
+                    } else {
+                        Err(meta.error("unsupported attribute"))
+                    }
+                })
+                .unwrap_or(());
+            }
+        }
+
+        NewOptions { visibility }
+    }
 }
 
 enum FieldAttr {
@@ -270,7 +321,7 @@ impl FieldAttr {
                 .segments
                 .last()
                 .expect("Expected at least one segment where #[segment[::segment*](..)]");
-            if (*last_attr_path).ident != "new" {
+            if last_attr_path.ident != "new" {
                 continue;
             }
             let list = match attr.meta {
@@ -292,26 +343,38 @@ impl FieldAttr {
                         if path.is_ident("default") {
                             result = Some(FieldAttr::Default);
                         } else {
-                            panic!("Invalid #[new] attribute: #[new({})]", path_to_string(&path));
+                            panic!(
+                                "Invalid #[new] attribute: #[new({})]",
+                                path_to_string(&path)
+                            );
                         }
                     }
                     syn::Meta::NameValue(kv) => {
-                        if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(ref s), .. }) = kv.value {
+                        if let syn::Expr::Lit(syn::ExprLit {
+                            lit: syn::Lit::Str(ref s),
+                            ..
+                        }) = kv.value
+                        {
                             if kv.path.is_ident("value") {
-                                let tokens = lit_str_to_token_stream(s).ok().expect(&format!(
-                                    "Invalid expression in #[new]: `{}`",
-                                    s.value()
-                                ));
+                                let tokens = lit_str_to_token_stream(s).ok().unwrap_or_else(|| {
+                                    panic!("Invalid expression in #[new]: `{}`", s.value())
+                                });
                                 result = Some(FieldAttr::Value(tokens));
                             } else {
-                                panic!("Invalid #[new] attribute: #[new({} = ..)]", path_to_string(&kv.path));
+                                panic!(
+                                    "Invalid #[new] attribute: #[new({} = ..)]",
+                                    path_to_string(&kv.path)
+                                );
                             }
                         } else {
                             panic!("Non-string literal value in #[new] attribute");
                         }
                     }
                     syn::Meta::List(l) => {
-                        panic!("Invalid #[new] attribute: #[new({}(..))]", path_to_string(&l.path));
+                        panic!(
+                            "Invalid #[new] attribute: #[new({}(..))]",
+                            path_to_string(&l.path)
+                        );
                     }
                 }
             }
@@ -337,7 +400,7 @@ impl<'a> FieldExt<'a> {
             } else {
                 syn::Ident::new(&format!("f{}", idx), proc_macro2::Span::call_site())
             },
-            named: named,
+            named,
         }
     }
 
@@ -394,14 +457,16 @@ fn lit_str_to_token_stream(s: &syn::LitStr) -> Result<TokenStream2, proc_macro2:
 }
 
 fn set_ts_span_recursive(ts: TokenStream2, span: &proc_macro2::Span) -> TokenStream2 {
-    ts.into_iter().map(|mut tt| {
-        tt.set_span(span.clone());
-        if let proc_macro2::TokenTree::Group(group) = &mut tt {
-            let stream = set_ts_span_recursive(group.stream(), span);
-            *group = proc_macro2::Group::new(group.delimiter(), stream);
-        }
-        tt
-    }).collect()
+    ts.into_iter()
+        .map(|mut tt| {
+            tt.set_span(*span);
+            if let proc_macro2::TokenTree::Group(group) = &mut tt {
+                let stream = set_ts_span_recursive(group.stream(), span);
+                *group = proc_macro2::Group::new(group.delimiter(), stream);
+            }
+            tt
+        })
+        .collect()
 }
 
 fn to_snake_case(s: &str) -> String {
@@ -410,13 +475,12 @@ fn to_snake_case(s: &str) -> String {
             .fold((None, None, String::new()), |(prev, ch, mut acc), next| {
                 if let Some(ch) = ch {
                     if let Some(prev) = prev {
-                        if ch.is_uppercase() {
-                            if prev.is_lowercase()
+                        if ch.is_uppercase()
+                            && (prev.is_lowercase()
                                 || prev.is_numeric()
-                                || (prev.is_uppercase() && next.is_lowercase())
-                            {
-                                acc.push('_');
-                            }
+                                || (prev.is_uppercase() && next.is_lowercase()))
+                        {
+                            acc.push('_');
                         }
                     }
                     acc.extend(ch.to_lowercase());
