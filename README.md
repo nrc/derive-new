@@ -87,7 +87,7 @@ structs work for enum variants as well:
 
 ```rust
 #[derive(new)]
-struct Enum {
+enum Enum {
     FirstVariant,
     SecondVariant(bool, #[new(default)] u8),
     ThirdVariant { x: i32, #[new(value = "vec![1]")] y: Vec<u8> }
