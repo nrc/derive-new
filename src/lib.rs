@@ -68,6 +68,7 @@
 //! to `impl Into<T>`, and populates the field with `value.into()`:
 //!
 //! ```rust
+//! # use derive_new::new;
 //! #[derive(new)]
 //! struct Foo {
 //!     #[new(into)]
@@ -81,6 +82,7 @@
 //! to `impl IntoIterator<Item = T>`, and populates the field with `value.into_iter().collect()`:
 //!
 //! ```rust
+//! # use derive_new::new;
 //! #[derive(new)]
 //! struct Foo {
 //!     #[new(into_iter = "bool")]
