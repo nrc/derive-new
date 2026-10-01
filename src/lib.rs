@@ -538,6 +538,7 @@ impl<'a> FieldExt<'a> {
 
     pub fn as_init(&self) -> proc_macro2::TokenStream {
         let f_name = &self.ident;
+        let from_argument = self.attr.is_none() && !self.is_phantom_data();
         let init = if self.is_phantom_data() {
             my_quote!(::core::marker::PhantomData)
         } else {
@@ -546,7 +547,7 @@ impl<'a> FieldExt<'a> {
                 Some(ref attr) => attr.as_tokens(f_name),
             }
         };
-        if self.named {
+        if self.named && !from_argument {
             my_quote!(#f_name: #init)
         } else {
             my_quote!(#init)
